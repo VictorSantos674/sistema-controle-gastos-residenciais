@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CategoriaInput, criarCategoria, listarCategorias } from "../api/categorias";
+import { CategoriaInput, criarCategoria, deletarCategoria, listarCategorias } from "../api/categorias";
 import { Categoria } from "../types";
 
 const emptyForm: CategoriaInput = { descricao: "", finalidade: 1 };
@@ -9,6 +9,7 @@ export default function CategoriasPage() {
   const [form, setForm] = useState<CategoriaInput>(emptyForm);
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   const carregar = async () => setCategorias(await listarCategorias());
 
@@ -29,6 +30,18 @@ export default function CategoriasPage() {
       setErro(err instanceof Error ? err.message : "Erro ao salvar categoria.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeletar = async (id: number) => {
+    setErro("");
+    try {
+      await deletarCategoria(id);
+      setConfirmDeleteId(null);
+      await carregar();
+    } catch (err: unknown) {
+      setConfirmDeleteId(null);
+      setErro(err instanceof Error ? err.message : "Erro ao deletar categoria.");
     }
   };
 
@@ -84,6 +97,7 @@ export default function CategoriasPage() {
               <th>#</th>
               <th>Descrição</th>
               <th>Finalidade</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -94,12 +108,41 @@ export default function CategoriasPage() {
                 <td>
                   <span className={badgeClass(c.finalidade)}>{c.finalidade}</span>
                 </td>
+                <td>
+                  {confirmDeleteId === c.id ? (
+                    <div className="confirm-inline">
+                      <span>Deletar categoria?</span>
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        onClick={() => handleDeletar(c.id)}
+                      >
+                        Confirmar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setConfirmDeleteId(null)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      onClick={() => setConfirmDeleteId(c.id)}
+                    >
+                      Deletar
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
             {categorias.length === 0 && (
               <tr>
                 <td
-                  colSpan={3}
+                  colSpan={4}
                   style={{ textAlign: "center", color: "#aaa", padding: "32px", fontSize: 14 }}
                 >
                   Nenhuma categoria cadastrada.

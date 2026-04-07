@@ -35,7 +35,8 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const fmt = (v: number) => `R$ ${v.toFixed(2)}`;
+  const fmt = (v: number) =>
+    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
     <div>

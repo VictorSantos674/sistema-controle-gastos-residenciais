@@ -13,7 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import { relatorioPorCategoria, relatorioPorPessoa } from "../api/relatorios";
-import { RelatorioPorCategoria, RelatorioPorPessoa } from "../types";
+import { Finalidade, RelatorioPorCategoria, RelatorioPorPessoa } from "../types";
 
 const PIE_COLORS = ["#e74c3c", "#e67e22", "#f39c12", "#9b59b6", "#2980b9", "#16a085", "#27ae60"];
 
@@ -22,6 +22,7 @@ export default function RelatoriosPage() {
   const [porCategoria, setPorCategoria] = useState<RelatorioPorCategoria | null>(null);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
+  const [filtroFinalidade, setFiltroFinalidade] = useState<"" | Finalidade>("");
 
   const carregar = async () => {
     setLoading(true);
@@ -41,11 +42,18 @@ export default function RelatoriosPage() {
     carregar();
   }, []);
 
-  const fmt = (v: number) => `R$ ${v.toFixed(2)}`;
+  const fmt = (v: number) =>
+    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const saldoColor = (v: number): React.CSSProperties => ({
     color: v >= 0 ? "#27ae60" : "#e74c3c",
     fontWeight: 600,
   });
+
+  const badgeClass = (finalidade: string) => {
+    if (finalidade === "Receita") return "badge badge-receita";
+    if (finalidade === "Despesa") return "badge badge-despesa";
+    return "badge badge-ambas";
+  };
 
   const barData =
     porPessoa?.pessoas.map((p) => ({
@@ -58,6 +66,11 @@ export default function RelatoriosPage() {
     porCategoria?.categorias
       .filter((c) => c.totalDespesas > 0)
       .map((c) => ({ name: c.descricaoCategoria, value: c.totalDespesas })) ?? [];
+
+  const categoriasFiltradas =
+    porCategoria?.categorias.filter(
+      (c) => filtroFinalidade === "" || c.finalidade === filtroFinalidade
+    ) ?? [];
 
   return (
     <div>
@@ -132,7 +145,23 @@ export default function RelatoriosPage() {
       )}
 
       <div className="card">
-        <h3>Totais por Categoria</h3>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <h3 style={{ margin: 0 }}>Totais por Categoria</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <label style={{ fontSize: 13, color: "#666" }}>Filtrar por finalidade:</label>
+            <select
+              className="form-select"
+              style={{ maxWidth: 160 }}
+              value={filtroFinalidade}
+              onChange={(e) => setFiltroFinalidade(e.target.value as "" | Finalidade)}
+            >
+              <option value="">Todas</option>
+              <option value="Despesa">Despesa</option>
+              <option value="Receita">Receita</option>
+              <option value="Ambas">Ambas</option>
+            </select>
+          </div>
+        </div>
         <table className="data-table">
           <thead>
             <tr>
@@ -144,24 +173,28 @@ export default function RelatoriosPage() {
             </tr>
           </thead>
           <tbody>
-            {porCategoria?.categorias.map((c) => (
+            {categoriasFiltradas.map((c) => (
               <tr key={c.categoriaId}>
                 <td>{c.descricaoCategoria}</td>
-                <td>{c.finalidade}</td>
-                <td style={{ color: "#27ae60" }}>{fmt(c.totalReceitas)}</td>
-                <td style={{ color: "#e74c3c" }}>{fmt(c.totalDespesas)}</td>
+                <td>
+                  <span className={badgeClass(c.finalidade)}>{c.finalidade}</span>
+                </td>
+                <td style={{ color: c.finalidade === "Despesa" ? "#999" : "#27ae60" }}>
+                  {c.finalidade === "Despesa" ? "—" : fmt(c.totalReceitas)}
+                </td>
+                <td style={{ color: c.finalidade === "Receita" ? "#999" : "#e74c3c" }}>
+                  {c.finalidade === "Receita" ? "—" : fmt(c.totalDespesas)}
+                </td>
                 <td style={saldoColor(c.saldo)}>{fmt(c.saldo)}</td>
               </tr>
             ))}
-            {porCategoria && (
-              <tr className="total-row">
-                <td colSpan={2} style={{ color: "#fff" }}>
-                  Total Geral
-                </td>
-                <td style={{ color: "#2ecc71" }}>{fmt(porCategoria.totalGeralReceitas)}</td>
-                <td style={{ color: "#e74c3c" }}>{fmt(porCategoria.totalGeralDespesas)}</td>
-                <td style={saldoColor(porCategoria.saldoLiquido)}>
-                  {fmt(porCategoria.saldoLiquido)}
+            {porCategoria && categoriasFiltradas.length === 0 && (
+              <tr>
+                <td
+                  colSpan={5}
+                  style={{ textAlign: "center", color: "#aaa", padding: "24px", fontSize: 14 }}
+                >
+                  Nenhuma categoria encontrada para esta finalidade.
                 </td>
               </tr>
             )}

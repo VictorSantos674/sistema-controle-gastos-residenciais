@@ -1,5 +1,5 @@
 export type Finalidade = "Despesa" | "Receita" | "Ambas";
-export type TipoTransacao = "Despesa" | "Receita";
+export type TipoTransacao = "Despesa" | "Receita" | "Ambas";
 
 export interface Pessoa {
   id: number;
@@ -17,6 +17,8 @@ export interface Transacao {
   id: number;
   descricao: string;
   valor: number;
+  valorReceita?: number;
+  valorDespesa?: number;
   tipo: TipoTransacao;
   categoriaId: number;
   categoriaDescricao: string;
