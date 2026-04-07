@@ -1,121 +1,210 @@
 import { useEffect, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { relatorioPorCategoria, relatorioPorPessoa } from "../api/relatorios";
 import { RelatorioPorCategoria, RelatorioPorPessoa } from "../types";
+
+const PIE_COLORS = ["#e74c3c", "#e67e22", "#f39c12", "#9b59b6", "#2980b9", "#16a085", "#27ae60"];
 
 export default function RelatoriosPage() {
   const [porPessoa, setPorPessoa] = useState<RelatorioPorPessoa | null>(null);
   const [porCategoria, setPorCategoria] = useState<RelatorioPorCategoria | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
 
-  useEffect(() => {
-    Promise.all([relatorioPorPessoa(), relatorioPorCategoria()]).then(([p, c]) => {
+  const carregar = async () => {
+    setLoading(true);
+    setErro("");
+    try {
+      const [p, c] = await Promise.all([relatorioPorPessoa(), relatorioPorCategoria()]);
       setPorPessoa(p);
       setPorCategoria(c);
-    });
+    } catch (err: unknown) {
+      setErro(err instanceof Error ? err.message : "Erro ao carregar relatórios.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    carregar();
   }, []);
 
   const fmt = (v: number) => `R$ ${v.toFixed(2)}`;
+  const saldoColor = (v: number): React.CSSProperties => ({
+    color: v >= 0 ? "#27ae60" : "#e74c3c",
+    fontWeight: 600,
+  });
+
+  const barData =
+    porPessoa?.pessoas.map((p) => ({
+      name: p.nomePessoa.split(" ")[0],
+      Receitas: p.totalReceitas,
+      Despesas: p.totalDespesas,
+    })) ?? [];
+
+  const pieData =
+    porCategoria?.categorias
+      .filter((c) => c.totalDespesas > 0)
+      .map((c) => ({ name: c.descricaoCategoria, value: c.totalDespesas })) ?? [];
 
   return (
     <div>
-      <h2>Relatórios</h2>
+      <div className="page-header">
+        <h2>Relatórios</h2>
+        <button className="btn btn-primary btn-sm" onClick={carregar} disabled={loading}>
+          {loading ? "Atualizando..." : "Atualizar"}
+        </button>
+      </div>
 
-      <h3>Totais por Pessoa</h3>
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={styles.th}>Pessoa</th>
-            <th style={{ ...styles.th, color: "#27ae60" }}>Receitas</th>
-            <th style={{ ...styles.th, color: "#e74c3c" }}>Despesas</th>
-            <th style={styles.th}>Saldo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {porPessoa?.pessoas.map((p) => (
-            <tr key={p.pessoaId}>
-              <td style={styles.td}>{p.nomePessoa}</td>
-              <td style={{ ...styles.td, color: "#27ae60" }}>{fmt(p.totalReceitas)}</td>
-              <td style={{ ...styles.td, color: "#c0392b" }}>{fmt(p.totalDespesas)}</td>
-              <td style={{ ...styles.td, fontWeight: 600, color: p.saldo >= 0 ? "#27ae60" : "#c0392b" }}>
-                {fmt(p.saldo)}
-              </td>
-            </tr>
-          ))}
-          {porPessoa && (
-            <tr style={{ background: "#1a1a2e" }}>
-              <td style={{ ...styles.td, color: "#fff", fontWeight: 700 }}>Total Geral</td>
-              <td style={{ ...styles.td, color: "#2ecc71", fontWeight: 700 }}>
-                {fmt(porPessoa.totalGeralReceitas)}
-              </td>
-              <td style={{ ...styles.td, color: "#e74c3c", fontWeight: 700 }}>
-                {fmt(porPessoa.totalGeralDespesas)}
-              </td>
-              <td
-                style={{
-                  ...styles.td,
-                  fontWeight: 700,
-                  color: porPessoa.saldoLiquido >= 0 ? "#2ecc71" : "#e74c3c",
-                }}
-              >
-                {fmt(porPessoa.saldoLiquido)}
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      {erro && <div className="error-box">{erro}</div>}
 
-      <h3 style={{ marginTop: 40 }}>Totais por Categoria</h3>
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={styles.th}>Categoria</th>
-            <th style={styles.th}>Finalidade</th>
-            <th style={{ ...styles.th, color: "#27ae60" }}>Receitas</th>
-            <th style={{ ...styles.th, color: "#e74c3c" }}>Despesas</th>
-            <th style={styles.th}>Saldo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {porCategoria?.categorias.map((c) => (
-            <tr key={c.categoriaId}>
-              <td style={styles.td}>{c.descricaoCategoria}</td>
-              <td style={styles.td}>{c.finalidade}</td>
-              <td style={{ ...styles.td, color: "#27ae60" }}>{fmt(c.totalReceitas)}</td>
-              <td style={{ ...styles.td, color: "#c0392b" }}>{fmt(c.totalDespesas)}</td>
-              <td style={{ ...styles.td, fontWeight: 600, color: c.saldo >= 0 ? "#27ae60" : "#c0392b" }}>
-                {fmt(c.saldo)}
-              </td>
+      <div className="card">
+        <h3>Totais por Pessoa</h3>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Pessoa</th>
+              <th style={{ color: "#2ecc71" }}>Receitas</th>
+              <th style={{ color: "#e74c3c" }}>Despesas</th>
+              <th>Saldo</th>
             </tr>
-          ))}
-          {porCategoria && (
-            <tr style={{ background: "#1a1a2e" }}>
-              <td style={{ ...styles.td, color: "#fff", fontWeight: 700 }} colSpan={2}>
-                Total Geral
-              </td>
-              <td style={{ ...styles.td, color: "#2ecc71", fontWeight: 700 }}>
-                {fmt(porCategoria.totalGeralReceitas)}
-              </td>
-              <td style={{ ...styles.td, color: "#e74c3c", fontWeight: 700 }}>
-                {fmt(porCategoria.totalGeralDespesas)}
-              </td>
-              <td
-                style={{
-                  ...styles.td,
-                  fontWeight: 700,
-                  color: porCategoria.saldoLiquido >= 0 ? "#2ecc71" : "#e74c3c",
-                }}
+          </thead>
+          <tbody>
+            {porPessoa?.pessoas.map((p) => (
+              <tr key={p.pessoaId}>
+                <td>{p.nomePessoa}</td>
+                <td style={{ color: "#27ae60" }}>{fmt(p.totalReceitas)}</td>
+                <td style={{ color: "#e74c3c" }}>{fmt(p.totalDespesas)}</td>
+                <td style={saldoColor(p.saldo)}>{fmt(p.saldo)}</td>
+              </tr>
+            ))}
+            {porPessoa && (
+              <tr className="total-row">
+                <td style={{ color: "#fff" }}>Total Geral</td>
+                <td style={{ color: "#2ecc71" }}>{fmt(porPessoa.totalGeralReceitas)}</td>
+                <td style={{ color: "#e74c3c" }}>{fmt(porPessoa.totalGeralDespesas)}</td>
+                <td style={saldoColor(porPessoa.saldoLiquido)}>
+                  {fmt(porPessoa.saldoLiquido)}
+                </td>
+              </tr>
+            )}
+            {!porPessoa && (
+              <tr>
+                <td
+                  colSpan={4}
+                  style={{ textAlign: "center", color: "#aaa", padding: "32px", fontSize: 14 }}
+                >
+                  Carregando...
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {barData.length > 0 && (
+        <div className="card">
+          <h3>Receitas vs Despesas por Pessoa</h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={barData} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="name" tick={{ fontSize: 13 }} />
+              <YAxis tickFormatter={(v: number) => `R$${v}`} tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(v) => (typeof v === "number" ? fmt(v) : v)} />
+              <Legend />
+              <Bar dataKey="Receitas" fill="#27ae60" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Despesas" fill="#e74c3c" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      <div className="card">
+        <h3>Totais por Categoria</h3>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Categoria</th>
+              <th>Finalidade</th>
+              <th style={{ color: "#2ecc71" }}>Receitas</th>
+              <th style={{ color: "#e74c3c" }}>Despesas</th>
+              <th>Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {porCategoria?.categorias.map((c) => (
+              <tr key={c.categoriaId}>
+                <td>{c.descricaoCategoria}</td>
+                <td>{c.finalidade}</td>
+                <td style={{ color: "#27ae60" }}>{fmt(c.totalReceitas)}</td>
+                <td style={{ color: "#e74c3c" }}>{fmt(c.totalDespesas)}</td>
+                <td style={saldoColor(c.saldo)}>{fmt(c.saldo)}</td>
+              </tr>
+            ))}
+            {porCategoria && (
+              <tr className="total-row">
+                <td colSpan={2} style={{ color: "#fff" }}>
+                  Total Geral
+                </td>
+                <td style={{ color: "#2ecc71" }}>{fmt(porCategoria.totalGeralReceitas)}</td>
+                <td style={{ color: "#e74c3c" }}>{fmt(porCategoria.totalGeralDespesas)}</td>
+                <td style={saldoColor(porCategoria.saldoLiquido)}>
+                  {fmt(porCategoria.saldoLiquido)}
+                </td>
+              </tr>
+            )}
+            {!porCategoria && (
+              <tr>
+                <td
+                  colSpan={5}
+                  style={{ textAlign: "center", color: "#aaa", padding: "32px", fontSize: 14 }}
+                >
+                  Carregando...
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {pieData.length > 0 && (
+        <div className="card">
+          <h3>Distribuição de Despesas por Categoria</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={110}
+                label={({ name, percent }: { name?: string; percent?: number }) =>
+                  `${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`
+                }
+                labelLine={true}
               >
-                {fmt(porCategoria.saldoLiquido)}
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+                {pieData.map((_, i) => (
+                  <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(v) => (typeof v === "number" ? fmt(v) : v)} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  table: { width: "100%", borderCollapse: "collapse", marginBottom: 16 },
-  th: { background: "#1a1a2e", color: "#fff", padding: "10px 14px", textAlign: "left" },
-  td: { padding: "10px 14px", borderBottom: "1px solid #e0e0e0" },
-};
