@@ -14,12 +14,11 @@ export default function PessoasPage() {
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [form, setForm] = useState<PessoaInput>(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const carregar = async () => {
-    setPessoas(await listarPessoas());
-  };
+  const carregar = async () => setPessoas(await listarPessoas());
 
   useEffect(() => {
     carregar();
@@ -29,7 +28,7 @@ export default function PessoasPage() {
     e.preventDefault();
     setErro("");
     if (!form.nome.trim()) return setErro("O nome é obrigatório.");
-    if (form.idade < 0) return setErro("A idade deve ser um número positivo.");
+    if (form.idade < 0 || form.idade > 150) return setErro("Idade inválida.");
     setLoading(true);
     try {
       if (editingId !== null) {
@@ -40,8 +39,8 @@ export default function PessoasPage() {
       setForm(emptyForm);
       setEditingId(null);
       await carregar();
-    } catch {
-      setErro("Erro ao salvar pessoa.");
+    } catch (err: unknown) {
+      setErro(err instanceof Error ? err.message : "Erro ao salvar pessoa.");
     } finally {
       setLoading(false);
     }
@@ -50,137 +49,148 @@ export default function PessoasPage() {
   const handleEditar = (p: Pessoa) => {
     setEditingId(p.id);
     setForm({ nome: p.nome, idade: p.idade });
+    setConfirmDeleteId(null);
     setErro("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDeletar = async (id: number) => {
-    if (!confirm("Deletar esta pessoa e todas as suas transações?")) return;
-    await deletarPessoa(id);
-    await carregar();
+    setErro("");
+    try {
+      await deletarPessoa(id);
+      setConfirmDeleteId(null);
+      if (editingId === id) {
+        setEditingId(null);
+        setForm(emptyForm);
+      }
+      await carregar();
+    } catch (err: unknown) {
+      setConfirmDeleteId(null);
+      setErro(err instanceof Error ? err.message : "Erro ao deletar pessoa.");
+    }
+  };
+
+  const cancelarEdicao = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setErro("");
   };
 
   return (
     <div>
-      <h2>Pessoas</h2>
+      <div className="page-header">
+        <h2>Pessoas</h2>
+      </div>
 
-      <form onSubmit={handleSubmit} style={styles.form}>
+      <div className="card">
         <h3>{editingId !== null ? "Editar Pessoa" : "Nova Pessoa"}</h3>
-        {erro && <p style={styles.erro}>{erro}</p>}
-        <div style={styles.row}>
-          <label style={styles.label}>Nome</label>
-          <input
-            style={styles.input}
-            maxLength={200}
-            value={form.nome}
-            onChange={(e) => setForm({ ...form, nome: e.target.value })}
-          />
-        </div>
-        <div style={styles.row}>
-          <label style={styles.label}>Idade</label>
-          <input
-            style={{ ...styles.input, width: 100 }}
-            type="number"
-            min={0}
-            value={form.idade}
-            onChange={(e) => setForm({ ...form, idade: Number(e.target.value) })}
-          />
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button style={styles.btn} disabled={loading}>
-            {editingId !== null ? "Salvar alterações" : "Cadastrar"}
-          </button>
-          {editingId !== null && (
-            <button
-              type="button"
-              style={{ ...styles.btn, background: "#555" }}
-              onClick={() => {
-                setEditingId(null);
-                setForm(emptyForm);
-                setErro("");
-              }}
-            >
-              Cancelar
+        {erro && <div className="error-box">{erro}</div>}
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">Nome</label>
+            <input
+              className="form-input"
+              maxLength={200}
+              placeholder="Nome completo"
+              value={form.nome}
+              onChange={(e) => setForm({ ...form, nome: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Idade</label>
+            <input
+              className="form-input"
+              style={{ maxWidth: 120 }}
+              type="number"
+              min={0}
+              max={150}
+              placeholder="0"
+              value={form.idade || ""}
+              onChange={(e) => setForm({ ...form, idade: Number(e.target.value) })}
+            />
+          </div>
+          <div className="btn-row">
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? "Salvando..." : editingId !== null ? "Salvar alterações" : "Cadastrar"}
             </button>
-          )}
-        </div>
-      </form>
+            {editingId !== null && (
+              <button type="button" className="btn btn-secondary" onClick={cancelarEdicao}>
+                Cancelar
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
 
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={styles.th}>#</th>
-            <th style={styles.th}>Nome</th>
-            <th style={styles.th}>Idade</th>
-            <th style={styles.th}>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {pessoas.map((p) => (
-            <tr key={p.id}>
-              <td style={styles.td}>{p.id}</td>
-              <td style={styles.td}>{p.nome}</td>
-              <td style={styles.td}>{p.idade}</td>
-              <td style={styles.td}>
-                <button style={styles.btnSm} onClick={() => handleEditar(p)}>
-                  Editar
-                </button>
-                <button
-                  style={{ ...styles.btnSm, background: "#c0392b", marginLeft: 6 }}
-                  onClick={() => handleDeletar(p.id)}
-                >
-                  Deletar
-                </button>
-              </td>
-            </tr>
-          ))}
-          {pessoas.length === 0 && (
+      <div className="card">
+        <table className="data-table">
+          <thead>
             <tr>
-              <td colSpan={4} style={{ ...styles.td, textAlign: "center", color: "#888" }}>
-                Nenhuma pessoa cadastrada.
-              </td>
+              <th>#</th>
+              <th>Nome</th>
+              <th>Idade</th>
+              <th>Ações</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {pessoas.map((p) => (
+              <tr key={p.id}>
+                <td>{p.id}</td>
+                <td>{p.nome}</td>
+                <td>{p.idade} anos</td>
+                <td>
+                  {confirmDeleteId === p.id ? (
+                    <div className="confirm-inline">
+                      <span>Deletar e todas as transações?</span>
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        onClick={() => handleDeletar(p.id)}
+                      >
+                        Confirmar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setConfirmDeleteId(null)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="btn-row">
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => handleEditar(p)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        onClick={() => setConfirmDeleteId(p.id)}
+                      >
+                        Deletar
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {pessoas.length === 0 && (
+              <tr>
+                <td
+                  colSpan={4}
+                  style={{ textAlign: "center", color: "#aaa", padding: "32px", fontSize: 14 }}
+                >
+                  Nenhuma pessoa cadastrada.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  form: {
-    background: "#f5f5f5",
-    padding: 20,
-    borderRadius: 8,
-    marginBottom: 24,
-    maxWidth: 500,
-  },
-  row: { display: "flex", alignItems: "center", marginBottom: 12, gap: 12 },
-  label: { width: 60, fontWeight: 600 },
-  input: { padding: "6px 10px", border: "1px solid #ccc", borderRadius: 4, flex: 1 },
-  btn: {
-    padding: "8px 20px",
-    background: "#1a1a2e",
-    color: "#fff",
-    border: "none",
-    borderRadius: 4,
-    cursor: "pointer",
-  },
-  btnSm: {
-    padding: "4px 12px",
-    background: "#1a1a2e",
-    color: "#fff",
-    border: "none",
-    borderRadius: 4,
-    cursor: "pointer",
-    fontSize: 13,
-  },
-  table: { width: "100%", borderCollapse: "collapse" },
-  th: {
-    background: "#1a1a2e",
-    color: "#fff",
-    padding: "10px 14px",
-    textAlign: "left",
-  },
-  td: { padding: "10px 14px", borderBottom: "1px solid #e0e0e0" },
-  erro: { color: "#c0392b", marginBottom: 8 },
-};
