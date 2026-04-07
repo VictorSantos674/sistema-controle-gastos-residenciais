@@ -14,7 +14,7 @@ public class RelatorioService : IRelatorioService
         _context = context;
     }
 
-    public async Task<RelatorioPorPessoaDto> ObterTotaisPorPessoaAsync()
+    public async Task<RelatorioPorPessoaDto> ObterTotaisPorPessoaAsync(int? mes = null, int? ano = null)
     {
         var pessoas = await _context.Pessoas
             .Include(p => p.Transacoes)
@@ -23,10 +23,13 @@ public class RelatorioService : IRelatorioService
 
         var itens = pessoas.Select(p =>
         {
-            var receitas = p.Transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => t.Valor)
-                         + p.Transacoes.Where(t => t.Tipo == TipoTransacao.Ambas).Sum(t => t.ValorReceita ?? 0);
-            var despesas = p.Transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => t.Valor)
-                         + p.Transacoes.Where(t => t.Tipo == TipoTransacao.Ambas).Sum(t => t.ValorDespesa ?? 0);
+            var transacoes = FiltrarPorPeriodo(p.Transacoes, mes, ano);
+
+            var receitas = transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => t.Valor)
+                         + transacoes.Where(t => t.Tipo == TipoTransacao.Ambas).Sum(t => t.ValorReceita ?? 0);
+            var despesas = transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => t.Valor)
+                         + transacoes.Where(t => t.Tipo == TipoTransacao.Ambas).Sum(t => t.ValorDespesa ?? 0);
+
             return new TotalPorPessoaDto
             {
                 PessoaId = p.Id,
@@ -46,7 +49,7 @@ public class RelatorioService : IRelatorioService
         };
     }
 
-    public async Task<RelatorioPorCategoriaDto> ObterTotaisPorCategoriaAsync()
+    public async Task<RelatorioPorCategoriaDto> ObterTotaisPorCategoriaAsync(int? mes = null, int? ano = null)
     {
         var categorias = await _context.Categorias
             .Include(c => c.Transacoes)
@@ -55,10 +58,13 @@ public class RelatorioService : IRelatorioService
 
         var itens = categorias.Select(c =>
         {
-            var receitas = c.Transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => t.Valor)
-                         + c.Transacoes.Where(t => t.Tipo == TipoTransacao.Ambas).Sum(t => t.ValorReceita ?? 0);
-            var despesas = c.Transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => t.Valor)
-                         + c.Transacoes.Where(t => t.Tipo == TipoTransacao.Ambas).Sum(t => t.ValorDespesa ?? 0);
+            var transacoes = FiltrarPorPeriodo(c.Transacoes, mes, ano);
+
+            var receitas = transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => t.Valor)
+                         + transacoes.Where(t => t.Tipo == TipoTransacao.Ambas).Sum(t => t.ValorReceita ?? 0);
+            var despesas = transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => t.Valor)
+                         + transacoes.Where(t => t.Tipo == TipoTransacao.Ambas).Sum(t => t.ValorDespesa ?? 0);
+
             return new TotalPorCategoriaDto
             {
                 CategoriaId = c.Id,
@@ -77,5 +83,15 @@ public class RelatorioService : IRelatorioService
             TotalGeralDespesas = itens.Sum(i => i.TotalDespesas),
             SaldoLiquido = itens.Sum(i => i.Saldo)
         };
+    }
+
+    private static IEnumerable<Transacao> FiltrarPorPeriodo(
+        IEnumerable<Transacao> transacoes, int? mes, int? ano)
+    {
+        if (mes.HasValue)
+            transacoes = transacoes.Where(t => t.Data.Month == mes.Value);
+        if (ano.HasValue)
+            transacoes = transacoes.Where(t => t.Data.Year == ano.Value);
+        return transacoes;
     }
 }

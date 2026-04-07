@@ -39,5 +39,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Transacao>()
             .Property(t => t.ValorDespesa)
             .HasColumnType("decimal(18,2)");
+
+        modelBuilder.Entity<Transacao>()
+            .Property(t => t.Data)
+            .HasColumnType("TEXT");
     }
 }

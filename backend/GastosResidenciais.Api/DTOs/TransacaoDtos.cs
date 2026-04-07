@@ -26,6 +26,8 @@ public class TransacaoInputDto
 
     [Required(ErrorMessage = "A pessoa é obrigatória.")]
     public int PessoaId { get; set; }
+
+    public DateOnly? Data { get; set; }
 }
 
 public class TransacaoOutputDto
@@ -40,4 +42,7 @@ public class TransacaoOutputDto
     public string CategoriaDescricao { get; set; } = string.Empty;
     public int PessoaId { get; set; }
     public string PessoaNome { get; set; } = string.Empty;
+
+    /// Data em que a transação foi realizada.
+    public DateOnly Data { get; set; }
 }

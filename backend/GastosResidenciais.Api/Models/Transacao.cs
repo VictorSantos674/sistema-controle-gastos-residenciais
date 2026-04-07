@@ -26,4 +26,7 @@ public class Transacao
     [Required]
     public int PessoaId { get; set; }
     public Pessoa Pessoa { get; set; } = null!;
+
+    [Required]
+    public DateOnly Data { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 }

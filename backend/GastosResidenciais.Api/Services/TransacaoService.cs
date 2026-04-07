@@ -34,7 +34,8 @@ public class TransacaoService : ITransacaoService
                 CategoriaId = t.CategoriaId,
                 CategoriaDescricao = t.Categoria.Descricao,
                 PessoaId = t.PessoaId,
-                PessoaNome = t.Pessoa.Nome
+                PessoaNome = t.Pessoa.Nome,
+                Data = t.Data
             })
             .ToListAsync();
     }
@@ -72,7 +73,8 @@ public class TransacaoService : ITransacaoService
                 ValorDespesa = dto.ValorDespesa,
                 Tipo = TipoTransacao.Ambas,
                 CategoriaId = dto.CategoriaId,
-                PessoaId = dto.PessoaId
+                PessoaId = dto.PessoaId,
+                Data = dto.Data ?? DateOnly.FromDateTime(DateTime.Today)
             };
         }
         else
@@ -97,7 +99,8 @@ public class TransacaoService : ITransacaoService
                 Valor = dto.Valor.Value,
                 Tipo = dto.Tipo,
                 CategoriaId = dto.CategoriaId,
-                PessoaId = dto.PessoaId
+                PessoaId = dto.PessoaId,
+                Data = dto.Data ?? DateOnly.FromDateTime(DateTime.Today)
             };
         }
 
@@ -117,7 +120,8 @@ public class TransacaoService : ITransacaoService
             CategoriaId = transacao.CategoriaId,
             CategoriaDescricao = categoria.Descricao,
             PessoaId = transacao.PessoaId,
-            PessoaNome = pessoa.Nome
+            PessoaNome = pessoa.Nome,
+            Data = transacao.Data
         }, null);
     }
 
