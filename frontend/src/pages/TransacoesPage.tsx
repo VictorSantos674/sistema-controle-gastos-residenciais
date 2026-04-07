@@ -4,6 +4,8 @@ import { listarPessoas } from "../api/pessoas";
 import { TransacaoInput, criarTransacao, deletarTransacao, listarTransacoes } from "../api/transacoes";
 import { Categoria, Pessoa, Transacao } from "../types";
 
+const hoje = () => new Date().toISOString().slice(0, 10);
+
 const emptyForm: TransacaoInput = {
   descricao: "",
   valor: 0,
@@ -12,6 +14,7 @@ const emptyForm: TransacaoInput = {
   tipo: 1,
   categoriaId: 0,
   pessoaId: 0,
+  data: hoje(),
 };
 
 export default function TransacoesPage() {
@@ -183,6 +186,17 @@ export default function TransacoesPage() {
             />
           </div>
 
+          <div className="form-group">
+            <label className="form-label">Data</label>
+            <input
+              className="form-input"
+              style={{ maxWidth: 180 }}
+              type="date"
+              value={form.data ?? hoje()}
+              onChange={(e) => setForm({ ...form, data: e.target.value })}
+            />
+          </div>
+
           {ehAmbas ? (
             <div style={{ display: "flex", gap: 16 }}>
               <div className="form-group">
@@ -239,6 +253,7 @@ export default function TransacoesPage() {
           <thead>
             <tr>
               <th>#</th>
+              <th>Data</th>
               <th>Pessoa</th>
               <th>Tipo</th>
               <th>Categoria</th>
@@ -251,6 +266,9 @@ export default function TransacoesPage() {
             {transacoes.map((t) => (
               <tr key={t.id}>
                 <td>{t.id}</td>
+                <td style={{ whiteSpace: "nowrap" }}>
+                  {new Date(t.data + "T00:00:00").toLocaleDateString("pt-BR")}
+                </td>
                 <td>{t.pessoaNome}</td>
                 <td>
                   <span className={tipoBadgeClass(t.tipo)}>{t.tipo}</span>
@@ -302,7 +320,7 @@ export default function TransacoesPage() {
             {transacoes.length === 0 && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   style={{ textAlign: "center", color: "#aaa", padding: "32px", fontSize: 14 }}
                 >
                   Nenhuma transação registrada.

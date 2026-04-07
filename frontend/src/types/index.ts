@@ -24,6 +24,7 @@ export interface Transacao {
   categoriaDescricao: string;
   pessoaId: number;
   pessoaNome: string;
+  data: string;
 }
 
 export interface TotalPorPessoa {

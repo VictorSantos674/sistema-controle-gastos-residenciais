@@ -12,10 +12,20 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { relatorioPorCategoria, relatorioPorPessoa } from "../api/relatorios";
+import { FiltroRelatorio, relatorioPorCategoria, relatorioPorPessoa } from "../api/relatorios";
 import { Finalidade, RelatorioPorCategoria, RelatorioPorPessoa } from "../types";
 
 const PIE_COLORS = ["#e74c3c", "#e67e22", "#f39c12", "#9b59b6", "#2980b9", "#16a085", "#27ae60"];
+
+const MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+const gerarAnos = () => {
+  const atual = new Date().getFullYear();
+  return Array.from({ length: 5 }, (_, i) => atual - 4 + i);
+};
 
 export default function RelatoriosPage() {
   const [porPessoa, setPorPessoa] = useState<RelatorioPorPessoa | null>(null);
@@ -24,11 +34,15 @@ export default function RelatoriosPage() {
   const [erro, setErro] = useState("");
   const [filtroFinalidade, setFiltroFinalidade] = useState<"" | Finalidade>("");
 
+  const [filtroMes, setFiltroMes] = useState<number | undefined>(undefined);
+  const [filtroAno, setFiltroAno] = useState<number | undefined>(new Date().getFullYear());
+
   const carregar = async () => {
     setLoading(true);
     setErro("");
     try {
-      const [p, c] = await Promise.all([relatorioPorPessoa(), relatorioPorCategoria()]);
+      const filtro: FiltroRelatorio = { mes: filtroMes, ano: filtroAno };
+      const [p, c] = await Promise.all([relatorioPorPessoa(filtro), relatorioPorCategoria(filtro)]);
       setPorPessoa(p);
       setPorCategoria(c);
     } catch (err: unknown) {
@@ -40,7 +54,7 @@ export default function RelatoriosPage() {
 
   useEffect(() => {
     carregar();
-  }, []);
+  }, [filtroMes, filtroAno]);
 
   const fmt = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -72,6 +86,15 @@ export default function RelatoriosPage() {
       (c) => filtroFinalidade === "" || c.finalidade === filtroFinalidade
     ) ?? [];
 
+  const labelPeriodo =
+    filtroAno && filtroMes
+      ? `${MESES[filtroMes - 1]} de ${filtroAno}`
+      : filtroAno
+      ? `Ano ${filtroAno}`
+      : filtroMes
+      ? MESES[filtroMes - 1]
+      : "Todos os períodos";
+
   return (
     <div>
       <div className="page-header">
@@ -79,6 +102,51 @@ export default function RelatoriosPage() {
         <button className="btn btn-primary btn-sm" onClick={carregar} disabled={loading}>
           {loading ? "Atualizando..." : "Atualizar"}
         </button>
+      </div>
+
+      {/* Filtro de período */}
+      <div className="card" style={{ paddingTop: 16, paddingBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#555" }}>Período:</span>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <label style={{ fontSize: 13, color: "#666" }}>Mês</label>
+            <select
+              className="form-select"
+              style={{ maxWidth: 150 }}
+              value={filtroMes ?? ""}
+              onChange={(e) =>
+                setFiltroMes(e.target.value === "" ? undefined : Number(e.target.value))
+              }
+            >
+              <option value="">Todos</option>
+              {MESES.map((m, i) => (
+                <option key={i + 1} value={i + 1}>{m}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <label style={{ fontSize: 13, color: "#666" }}>Ano</label>
+            <select
+              className="form-select"
+              style={{ maxWidth: 110 }}
+              value={filtroAno ?? ""}
+              onChange={(e) =>
+                setFiltroAno(e.target.value === "" ? undefined : Number(e.target.value))
+              }
+            >
+              <option value="">Todos</option>
+              {gerarAnos().map((a) => (
+                <option key={a} value={a}>{a}</option>
+              ))}
+            </select>
+          </div>
+
+          <span style={{ fontSize: 13, color: "#888", fontStyle: "italic" }}>
+            {labelPeriodo}
+          </span>
+        </div>
       </div>
 
       {erro && <div className="error-box">{erro}</div>}

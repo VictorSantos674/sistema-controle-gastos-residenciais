@@ -9,6 +9,7 @@ export interface TransacaoInput {
   tipo: number;
   categoriaId: number;
   pessoaId: number;
+  data?: string;
 }
 
 export const listarTransacoes = (): Promise<Transacao[]> =>
