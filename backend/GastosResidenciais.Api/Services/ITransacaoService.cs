@@ -6,4 +6,5 @@ public interface ITransacaoService
 {
     Task<IEnumerable<TransacaoOutputDto>> ListarAsync();
     Task<(TransacaoOutputDto? Resultado, string? Erro)> CriarAsync(TransacaoInputDto dto);
+    Task<string?> DeletarAsync(int id);
 }

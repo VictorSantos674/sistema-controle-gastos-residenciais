@@ -13,6 +13,9 @@ public class Transacao
     [Required]
     public decimal Valor { get; set; }
 
+    public decimal? ValorReceita { get; set; }
+    public decimal? ValorDespesa { get; set; }
+
     [Required]
     public TipoTransacao Tipo { get; set; }
 

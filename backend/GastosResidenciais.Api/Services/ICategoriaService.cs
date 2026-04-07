@@ -6,4 +6,5 @@ public interface ICategoriaService
 {
     Task<IEnumerable<CategoriaOutputDto>> ListarAsync();
     Task<CategoriaOutputDto> CriarAsync(CategoriaInputDto dto);
+    Task<string?> DeletarAsync(int id);
 }

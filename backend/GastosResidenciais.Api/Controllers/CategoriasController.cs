@@ -28,4 +28,12 @@ public class CategoriasController : ControllerBase
         var resultado = await _service.CriarAsync(dto);
         return CreatedAtAction(nameof(Listar), new { id = resultado.Id }, resultado);
     }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Deletar(int id)
+    {
+        var erro = await _service.DeletarAsync(id);
+        if (erro is not null) return BadRequest(new { mensagem = erro });
+        return NoContent();
+    }
 }

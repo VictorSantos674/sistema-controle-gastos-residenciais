@@ -40,4 +40,22 @@ public class CategoriaService : ICategoriaService
             Finalidade = categoria.Finalidade.ToString()
         };
     }
+
+    public async Task<string?> DeletarAsync(int id)
+    {
+        var categoria = await _context.Categorias
+            .Include(c => c.Transacoes)
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (categoria is null)
+            return "Categoria não encontrada.";
+
+        /// Restrição: categoria com transações vinculadas não pode ser excluída.
+        if (categoria.Transacoes.Count > 0)
+            return "Não é possível excluir uma categoria que possui transações vinculadas.";
+
+        _context.Categorias.Remove(categoria);
+        await _context.SaveChangesAsync();
+        return null;
+    }
 }

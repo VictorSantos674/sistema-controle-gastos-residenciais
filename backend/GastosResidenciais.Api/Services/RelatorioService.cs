@@ -23,8 +23,10 @@ public class RelatorioService : IRelatorioService
 
         var itens = pessoas.Select(p =>
         {
-            var receitas = p.Transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => t.Valor);
-            var despesas = p.Transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => t.Valor);
+            var receitas = p.Transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => t.Valor)
+                         + p.Transacoes.Where(t => t.Tipo == TipoTransacao.Ambas).Sum(t => t.ValorReceita ?? 0);
+            var despesas = p.Transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => t.Valor)
+                         + p.Transacoes.Where(t => t.Tipo == TipoTransacao.Ambas).Sum(t => t.ValorDespesa ?? 0);
             return new TotalPorPessoaDto
             {
                 PessoaId = p.Id,
@@ -53,8 +55,10 @@ public class RelatorioService : IRelatorioService
 
         var itens = categorias.Select(c =>
         {
-            var receitas = c.Transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => t.Valor);
-            var despesas = c.Transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => t.Valor);
+            var receitas = c.Transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => t.Valor)
+                         + c.Transacoes.Where(t => t.Tipo == TipoTransacao.Ambas).Sum(t => t.ValorReceita ?? 0);
+            var despesas = c.Transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => t.Valor)
+                         + c.Transacoes.Where(t => t.Tipo == TipoTransacao.Ambas).Sum(t => t.ValorDespesa ?? 0);
             return new TotalPorCategoriaDto
             {
                 CategoriaId = c.Id,

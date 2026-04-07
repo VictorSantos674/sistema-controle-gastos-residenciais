@@ -29,4 +29,12 @@ public class TransacoesController : ControllerBase
         if (erro is not null) return BadRequest(new { mensagem = erro });
         return StatusCode(201, resultado);
     }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Deletar(int id)
+    {
+        var erro = await _service.DeletarAsync(id);
+        if (erro is not null) return NotFound(new { mensagem = erro });
+        return NoContent();
+    }
 }
