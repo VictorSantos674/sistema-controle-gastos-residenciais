@@ -1,3 +1,4 @@
+import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Bar,
@@ -12,8 +13,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { FiltroRelatorio, relatorioPorCategoria, relatorioPorPessoa } from "../api/relatorios";
-import { Finalidade, RelatorioPorCategoria, RelatorioPorPessoa } from "../types";
+import { type FiltroRelatorio, relatorioPorCategoria, relatorioPorPessoa } from "../api/relatorios";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Select } from "../components/ui/select";
+import type { Finalidade, RelatorioPorCategoria, RelatorioPorPessoa } from "../types";
 
 const PIE_COLORS = ["#e74c3c", "#e67e22", "#f39c12", "#9b59b6", "#2980b9", "#16a085", "#27ae60"];
 
@@ -27,13 +32,18 @@ const gerarAnos = () => {
   return Array.from({ length: 5 }, (_, i) => atual - 4 + i);
 };
 
+function finalidadeBadge(finalidade: string) {
+  if (finalidade === "Receita") return <Badge variant="receita">Receita</Badge>;
+  if (finalidade === "Despesa") return <Badge variant="despesa">Despesa</Badge>;
+  return <Badge variant="ambas">Ambas</Badge>;
+}
+
 export default function RelatoriosPage() {
   const [porPessoa, setPorPessoa] = useState<RelatorioPorPessoa | null>(null);
   const [porCategoria, setPorCategoria] = useState<RelatorioPorCategoria | null>(null);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
   const [filtroFinalidade, setFiltroFinalidade] = useState<"" | Finalidade>("");
-
   const [filtroMes, setFiltroMes] = useState<number | undefined>(undefined);
   const [filtroAno, setFiltroAno] = useState<number | undefined>(new Date().getFullYear());
 
@@ -52,22 +62,12 @@ export default function RelatoriosPage() {
     }
   };
 
-  useEffect(() => {
-    carregar();
-  }, [filtroMes, filtroAno]);
+  useEffect(() => { carregar(); }, [filtroMes, filtroAno]);
 
-  const fmt = (v: number) =>
-    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  const saldoColor = (v: number): React.CSSProperties => ({
-    color: v >= 0 ? "#27ae60" : "#e74c3c",
-    fontWeight: 600,
-  });
+  const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-  const badgeClass = (finalidade: string) => {
-    if (finalidade === "Receita") return "badge badge-receita";
-    if (finalidade === "Despesa") return "badge badge-despesa";
-    return "badge badge-ambas";
-  };
+  const saldoClass = (v: number) =>
+    v >= 0 ? "font-semibold text-emerald-600" : "font-semibold text-red-600";
 
   const barData =
     porPessoa?.pessoas.map((p) => ({
@@ -96,24 +96,27 @@ export default function RelatoriosPage() {
       : "Todos os períodos";
 
   return (
-    <div>
-      <div className="page-header">
-        <h2>Relatórios</h2>
-        <button className="btn btn-primary btn-sm" onClick={carregar} disabled={loading}>
-          {loading ? "Atualizando..." : "Atualizar"}
-        </button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
+          <p className="text-sm text-gray-500">Análise financeira por pessoa e categoria</p>
+        </div>
+        <Button size="sm" variant="outline" onClick={carregar} disabled={loading}>
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+          Atualizar
+        </Button>
       </div>
 
       {/* Filtro de período */}
-      <div className="card" style={{ paddingTop: 16, paddingBottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "#555" }}>Período:</span>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <label style={{ fontSize: 13, color: "#666" }}>Mês</label>
-            <select
-              className="form-select"
-              style={{ maxWidth: 150 }}
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-4 py-4">
+          <span className="text-sm font-semibold text-gray-600">Período:</span>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-500">Mês</label>
+            <Select
+              className="max-w-[150px]"
               value={filtroMes ?? ""}
               onChange={(e) =>
                 setFiltroMes(e.target.value === "" ? undefined : Number(e.target.value))
@@ -123,14 +126,12 @@ export default function RelatoriosPage() {
               {MESES.map((m, i) => (
                 <option key={i + 1} value={i + 1}>{m}</option>
               ))}
-            </select>
+            </Select>
           </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <label style={{ fontSize: 13, color: "#666" }}>Ano</label>
-            <select
-              className="form-select"
-              style={{ maxWidth: 110 }}
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-500">Ano</label>
+            <Select
+              className="max-w-[110px]"
               value={filtroAno ?? ""}
               onChange={(e) =>
                 setFiltroAno(e.target.value === "" ? undefined : Number(e.target.value))
@@ -140,171 +141,175 @@ export default function RelatoriosPage() {
               {gerarAnos().map((a) => (
                 <option key={a} value={a}>{a}</option>
               ))}
-            </select>
+            </Select>
           </div>
+          <span className="text-xs italic text-gray-400">{labelPeriodo}</span>
+        </CardContent>
+      </Card>
 
-          <span style={{ fontSize: 13, color: "#888", fontStyle: "italic" }}>
-            {labelPeriodo}
-          </span>
-        </div>
-      </div>
-
-      {erro && <div className="error-box">{erro}</div>}
-
-      <div className="card">
-        <h3>Totais por Pessoa</h3>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Pessoa</th>
-              <th style={{ color: "#2ecc71" }}>Receitas</th>
-              <th style={{ color: "#e74c3c" }}>Despesas</th>
-              <th>Saldo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {porPessoa?.pessoas.map((p) => (
-              <tr key={p.pessoaId}>
-                <td>{p.nomePessoa}</td>
-                <td style={{ color: "#27ae60" }}>{fmt(p.totalReceitas)}</td>
-                <td style={{ color: "#e74c3c" }}>{fmt(p.totalDespesas)}</td>
-                <td style={saldoColor(p.saldo)}>{fmt(p.saldo)}</td>
-              </tr>
-            ))}
-            {porPessoa && (
-              <tr className="total-row">
-                <td style={{ color: "#fff" }}>Total Geral</td>
-                <td style={{ color: "#2ecc71" }}>{fmt(porPessoa.totalGeralReceitas)}</td>
-                <td style={{ color: "#e74c3c" }}>{fmt(porPessoa.totalGeralDespesas)}</td>
-                <td style={saldoColor(porPessoa.saldoLiquido)}>
-                  {fmt(porPessoa.saldoLiquido)}
-                </td>
-              </tr>
-            )}
-            {!porPessoa && (
-              <tr>
-                <td
-                  colSpan={4}
-                  style={{ textAlign: "center", color: "#aaa", padding: "32px", fontSize: 14 }}
-                >
-                  Carregando...
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {barData.length > 0 && (
-        <div className="card">
-          <h3>Receitas vs Despesas por Pessoa</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={barData} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 13 }} />
-              <YAxis tickFormatter={(v: number) => `R$${v}`} tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(v) => (typeof v === "number" ? fmt(v) : v)} />
-              <Legend />
-              <Bar dataKey="Receitas" fill="#27ae60" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Despesas" fill="#e74c3c" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+      {erro && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {erro}
         </div>
       )}
 
-      <div className="card">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <h3 style={{ margin: 0 }}>Totais por Categoria</h3>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <label style={{ fontSize: 13, color: "#666" }}>Filtrar por finalidade:</label>
-            <select
-              className="form-select"
-              style={{ maxWidth: 160 }}
-              value={filtroFinalidade}
-              onChange={(e) => setFiltroFinalidade(e.target.value as "" | Finalidade)}
-            >
-              <option value="">Todas</option>
-              <option value="Despesa">Despesa</option>
-              <option value="Receita">Receita</option>
-              <option value="Ambas">Ambas</option>
-            </select>
-          </div>
-        </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Categoria</th>
-              <th>Finalidade</th>
-              <th style={{ color: "#2ecc71" }}>Receitas</th>
-              <th style={{ color: "#e74c3c" }}>Despesas</th>
-              <th>Saldo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {categoriasFiltradas.map((c) => (
-              <tr key={c.categoriaId}>
-                <td>{c.descricaoCategoria}</td>
-                <td>
-                  <span className={badgeClass(c.finalidade)}>{c.finalidade}</span>
-                </td>
-                <td style={{ color: c.finalidade === "Despesa" ? "#999" : "#27ae60" }}>
-                  {c.finalidade === "Despesa" ? "—" : fmt(c.totalReceitas)}
-                </td>
-                <td style={{ color: c.finalidade === "Receita" ? "#999" : "#e74c3c" }}>
-                  {c.finalidade === "Receita" ? "—" : fmt(c.totalDespesas)}
-                </td>
-                <td style={saldoColor(c.saldo)}>{fmt(c.saldo)}</td>
+      {/* Totais por Pessoa */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Totais por Pessoa</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-gray-50">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Pessoa</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-emerald-600">Receitas</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-red-500">Despesas</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Saldo</th>
               </tr>
-            ))}
-            {porCategoria && categoriasFiltradas.length === 0 && (
-              <tr>
-                <td
-                  colSpan={5}
-                  style={{ textAlign: "center", color: "#aaa", padding: "24px", fontSize: 14 }}
-                >
-                  Nenhuma categoria encontrada para esta finalidade.
-                </td>
-              </tr>
-            )}
-            {!porCategoria && (
-              <tr>
-                <td
-                  colSpan={5}
-                  style={{ textAlign: "center", color: "#aaa", padding: "32px", fontSize: 14 }}
-                >
-                  Carregando...
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {porPessoa?.pessoas.map((p) => (
+                <tr key={p.pessoaId} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-gray-800">{p.nomePessoa}</td>
+                  <td className="px-4 py-3 text-emerald-600">{fmt(p.totalReceitas)}</td>
+                  <td className="px-4 py-3 text-red-600">{fmt(p.totalDespesas)}</td>
+                  <td className={`px-4 py-3 ${saldoClass(p.saldo)}`}>{fmt(p.saldo)}</td>
+                </tr>
+              ))}
+              {porPessoa && (
+                <tr className="bg-slate-800 text-white">
+                  <td className="px-4 py-3 font-bold">Total Geral</td>
+                  <td className="px-4 py-3 font-bold text-emerald-400">{fmt(porPessoa.totalGeralReceitas)}</td>
+                  <td className="px-4 py-3 font-bold text-red-400">{fmt(porPessoa.totalGeralDespesas)}</td>
+                  <td className={`px-4 py-3 font-bold ${porPessoa.saldoLiquido >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {fmt(porPessoa.saldoLiquido)}
+                  </td>
+                </tr>
+              )}
+              {!porPessoa && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-400">Carregando...</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
 
-      {pieData.length > 0 && (
-        <div className="card">
-          <h3>Distribuição de Despesas por Categoria</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={110}
-                label={({ name, percent }: { name?: string; percent?: number }) =>
-                  `${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`
-                }
-                labelLine={true}
+      {/* Bar chart */}
+      {barData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Receitas vs Despesas por Pessoa</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={barData} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="name" tick={{ fontSize: 13 }} />
+                <YAxis tickFormatter={(v: number) => `R$${v}`} tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v) => (typeof v === "number" ? fmt(v) : v)} />
+                <Legend />
+                <Bar dataKey="Receitas" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Despesas" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Totais por Categoria */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle>Totais por Categoria</CardTitle>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500">Finalidade:</label>
+              <Select
+                className="max-w-[160px]"
+                value={filtroFinalidade}
+                onChange={(e) => setFiltroFinalidade(e.target.value as "" | Finalidade)}
               >
-                {pieData.map((_, i) => (
-                  <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v) => (typeof v === "number" ? fmt(v) : v)} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+                <option value="">Todas</option>
+                <option value="Despesa">Despesa</option>
+                <option value="Receita">Receita</option>
+                <option value="Ambas">Ambas</option>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-gray-50">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Categoria</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Finalidade</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-emerald-600">Receitas</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-red-500">Despesas</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Saldo</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {categoriasFiltradas.map((c) => (
+                <tr key={c.categoriaId} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-gray-800">{c.descricaoCategoria}</td>
+                  <td className="px-4 py-3">{finalidadeBadge(c.finalidade)}</td>
+                  <td className={`px-4 py-3 ${c.finalidade === "Despesa" ? "text-gray-300" : "text-emerald-600"}`}>
+                    {c.finalidade === "Despesa" ? "—" : fmt(c.totalReceitas)}
+                  </td>
+                  <td className={`px-4 py-3 ${c.finalidade === "Receita" ? "text-gray-300" : "text-red-600"}`}>
+                    {c.finalidade === "Receita" ? "—" : fmt(c.totalDespesas)}
+                  </td>
+                  <td className={`px-4 py-3 ${saldoClass(c.saldo)}`}>{fmt(c.saldo)}</td>
+                </tr>
+              ))}
+              {porCategoria && categoriasFiltradas.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-400">
+                    Nenhuma categoria encontrada para esta finalidade.
+                  </td>
+                </tr>
+              )}
+              {!porCategoria && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-400">Carregando...</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+
+      {/* Pie chart */}
+      {pieData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribuição de Despesas por Categoria</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={110}
+                  label={({ name, percent }: { name?: string; percent?: number }) =>
+                    `${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`
+                  }
+                >
+                  {pieData.map((_, i) => (
+                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v) => (typeof v === "number" ? fmt(v) : v)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
