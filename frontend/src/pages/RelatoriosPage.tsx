@@ -67,7 +67,7 @@ export default function RelatoriosPage() {
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   const saldoClass = (v: number) =>
-    v >= 0 ? "font-semibold text-emerald-600" : "font-semibold text-red-600";
+    v >= 0 ? "font-semibold text-emerald-600 dark:text-emerald-400" : "font-semibold text-red-600 dark:text-red-400";
 
   const barData =
     porPessoa?.pessoas.map((p) => ({
@@ -100,8 +100,8 @@ export default function RelatoriosPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
-          <p className="text-sm text-gray-500">Análise financeira por pessoa e categoria</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Relatórios</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Análise financeira por pessoa e categoria</p>
         </div>
         <Button size="sm" variant="outline" onClick={carregar} disabled={loading}>
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
@@ -112,9 +112,9 @@ export default function RelatoriosPage() {
       {/* Filtro de período */}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-4 py-4">
-          <span className="text-sm font-semibold text-gray-600">Período:</span>
+          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">Período:</span>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-500">Mês</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">Mês</label>
             <Select
               className="max-w-[150px]"
               value={filtroMes ?? ""}
@@ -129,7 +129,7 @@ export default function RelatoriosPage() {
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-500">Ano</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">Ano</label>
             <Select
               className="max-w-[110px]"
               value={filtroAno ?? ""}
@@ -143,12 +143,12 @@ export default function RelatoriosPage() {
               ))}
             </Select>
           </div>
-          <span className="text-xs italic text-gray-400">{labelPeriodo}</span>
+          <span className="text-xs italic text-gray-400 dark:text-gray-500">{labelPeriodo}</span>
         </CardContent>
       </Card>
 
       {erro && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
           {erro}
         </div>
       )}
@@ -161,19 +161,19 @@ export default function RelatoriosPage() {
         <CardContent className="p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Pessoa</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-emerald-600">Receitas</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-red-500">Despesas</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Saldo</th>
+              <tr className="border-b bg-gray-50 dark:bg-gray-700/50">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Pessoa</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Receitas</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-red-500 dark:text-red-400">Despesas</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Saldo</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {porPessoa?.pessoas.map((p) => (
-                <tr key={p.pessoaId} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-800">{p.nomePessoa}</td>
-                  <td className="px-4 py-3 text-emerald-600">{fmt(p.totalReceitas)}</td>
-                  <td className="px-4 py-3 text-red-600">{fmt(p.totalDespesas)}</td>
+                <tr key={p.pessoaId} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                  <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">{p.nomePessoa}</td>
+                  <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400">{fmt(p.totalReceitas)}</td>
+                  <td className="px-4 py-3 text-red-600 dark:text-red-400">{fmt(p.totalDespesas)}</td>
                   <td className={`px-4 py-3 ${saldoClass(p.saldo)}`}>{fmt(p.saldo)}</td>
                 </tr>
               ))}
@@ -189,7 +189,7 @@ export default function RelatoriosPage() {
               )}
               {!porPessoa && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-400">Carregando...</td>
+                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">Carregando...</td>
                 </tr>
               )}
             </tbody>
@@ -225,7 +225,7 @@ export default function RelatoriosPage() {
           <div className="flex items-center justify-between gap-4">
             <CardTitle>Totais por Categoria</CardTitle>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-500">Finalidade:</label>
+              <label className="text-xs text-gray-500 dark:text-gray-400">Finalidade:</label>
               <Select
                 className="max-w-[160px]"
                 value={filtroFinalidade}
@@ -242,23 +242,23 @@ export default function RelatoriosPage() {
         <CardContent className="p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Categoria</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Finalidade</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-emerald-600">Receitas</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-red-500">Despesas</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Saldo</th>
+              <tr className="border-b bg-gray-50 dark:bg-gray-700/50">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Categoria</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Finalidade</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Receitas</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-red-500 dark:text-red-400">Despesas</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Saldo</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {categoriasFiltradas.map((c) => (
-                <tr key={c.categoriaId} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-800">{c.descricaoCategoria}</td>
+                <tr key={c.categoriaId} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                  <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">{c.descricaoCategoria}</td>
                   <td className="px-4 py-3">{finalidadeBadge(c.finalidade)}</td>
-                  <td className={`px-4 py-3 ${c.finalidade === "Despesa" ? "text-gray-300" : "text-emerald-600"}`}>
+                  <td className={`px-4 py-3 ${c.finalidade === "Despesa" ? "text-gray-300 dark:text-gray-600" : "text-emerald-600 dark:text-emerald-400"}`}>
                     {c.finalidade === "Despesa" ? "—" : fmt(c.totalReceitas)}
                   </td>
-                  <td className={`px-4 py-3 ${c.finalidade === "Receita" ? "text-gray-300" : "text-red-600"}`}>
+                  <td className={`px-4 py-3 ${c.finalidade === "Receita" ? "text-gray-300 dark:text-gray-600" : "text-red-600 dark:text-red-400"}`}>
                     {c.finalidade === "Receita" ? "—" : fmt(c.totalDespesas)}
                   </td>
                   <td className={`px-4 py-3 ${saldoClass(c.saldo)}`}>{fmt(c.saldo)}</td>
@@ -266,14 +266,14 @@ export default function RelatoriosPage() {
               ))}
               {porCategoria && categoriasFiltradas.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-400">
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
                     Nenhuma categoria encontrada para esta finalidade.
                   </td>
                 </tr>
               )}
               {!porCategoria && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-400">Carregando...</td>
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">Carregando...</td>
                 </tr>
               )}
             </tbody>

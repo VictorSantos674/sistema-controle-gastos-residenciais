@@ -59,8 +59,8 @@ export default function CategoriasPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Categorias</h1>
-        <p className="text-sm text-gray-500">Gerencie as categorias de transações</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Categorias</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Gerencie as categorias de transações</p>
       </div>
 
       {/* Form card */}
@@ -73,7 +73,7 @@ export default function CategoriasPage() {
         </CardHeader>
         <CardContent className="pt-4">
           {erro && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
               <AlertTriangle size={15} className="shrink-0" />
               {erro}
             </div>
@@ -114,23 +114,23 @@ export default function CategoriasPage() {
         <CardContent className="p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">#</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Descrição</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Finalidade</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Ações</th>
+              <tr className="border-b bg-gray-50 dark:bg-gray-700/50">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">#</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Descrição</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Finalidade</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {categorias.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-400">{c.id}</td>
-                  <td className="px-4 py-3 font-medium text-gray-800">{c.descricao}</td>
+                <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                  <td className="px-4 py-3 text-gray-400 dark:text-gray-500">{c.id}</td>
+                  <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">{c.descricao}</td>
                   <td className="px-4 py-3">{finalidadeBadge(c.finalidade)}</td>
                   <td className="px-4 py-3">
                     {confirmDeleteId === c.id ? (
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-semibold text-red-600">Deletar categoria?</span>
+                        <span className="text-xs font-semibold text-red-600 dark:text-red-400">Deletar categoria?</span>
                         <Button size="sm" variant="destructive" onClick={() => handleDeletar(c.id)}>
                           Confirmar
                         </Button>
@@ -148,7 +148,7 @@ export default function CategoriasPage() {
               ))}
               {categorias.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-400">
+                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
                     Nenhuma categoria cadastrada.
                   </td>
                 </tr>

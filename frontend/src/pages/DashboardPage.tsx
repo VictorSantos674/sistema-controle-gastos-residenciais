@@ -6,24 +6,38 @@ import { relatorioPorPessoa } from "../api/relatorios";
 import { listarTransacoes } from "../api/transacoes";
 import { Card, CardContent } from "../components/ui/card";
 
+type StatColor = "emerald" | "red";
+
 interface StatCardProps {
   label: string;
   value: string;
   icon: React.ReactNode;
-  colorClass: string;
-  bgClass: string;
+  color: StatColor;
 }
 
-function StatCard({ label, value, icon, colorClass, bgClass }: Readonly<StatCardProps>) {
+// Mapeamento de cor para classes Tailwind (light + dark) — precisa ser literal para o Tailwind detectar
+const STAT_COLORS: Record<StatColor, { icon: string; bg: string }> = {
+  emerald: {
+    icon: "text-emerald-600 dark:text-emerald-400",
+    bg:   "bg-emerald-50 dark:bg-emerald-900/30",
+  },
+  red: {
+    icon: "text-red-600 dark:text-red-400",
+    bg:   "bg-red-50 dark:bg-red-900/30",
+  },
+};
+
+function StatCard({ label, value, icon, color }: Readonly<StatCardProps>) {
+  const { icon: iconClass, bg: bgClass } = STAT_COLORS[color];
   return (
     <Card>
       <CardContent className="flex items-center gap-4 p-5">
         <div className={`rounded-xl p-3 ${bgClass}`}>
-          <div className={colorClass}>{icon}</div>
+          <div className={iconClass}>{icon}</div>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</p>
-          <p className="mt-0.5 text-xl font-bold text-gray-800">{value}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</p>
+          <p className="mt-0.5 text-xl font-bold text-gray-800 dark:text-gray-200">{value}</p>
         </div>
       </CardContent>
     </Card>
@@ -40,10 +54,10 @@ function CountCard({ label, count, icon }: Readonly<CountCardProps>) {
   return (
     <Card>
       <CardContent className="flex items-center gap-4 p-5">
-        <div className="rounded-xl bg-slate-100 p-3 text-slate-600">{icon}</div>
+        <div className="rounded-xl bg-slate-100 p-3 text-slate-600 dark:bg-slate-700 dark:text-slate-300">{icon}</div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</p>
-          <p className="mt-0.5 text-3xl font-bold text-gray-800">{count}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</p>
+          <p className="mt-0.5 text-3xl font-bold text-gray-800 dark:text-gray-200">{count}</p>
         </div>
       </CardContent>
     </Card>
@@ -96,25 +110,25 @@ export default function DashboardPage() {
 
   const nomeMes = new Date().toLocaleString("pt-BR", { month: "long" });
 
-  const saldoMesColor = saldoMes >= 0 ? "emerald" : "red";
-  const saldoTotalColor = saldoLiquido >= 0 ? "emerald" : "red";
+  const saldoMesColor:   StatColor = saldoMes    >= 0 ? "emerald" : "red";
+  const saldoTotalColor: StatColor = saldoLiquido >= 0 ? "emerald" : "red";
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500">Visão geral das suas finanças</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Visão geral das suas finanças</p>
       </div>
 
       {erro && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
           {erro}
         </div>
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-gray-400">
+        <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
           Carregando...
         </div>
@@ -122,72 +136,36 @@ export default function DashboardPage() {
         <>
           {/* Mês atual */}
           <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500 capitalize">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 capitalize">
               {nomeMes} de {anoAtual}
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <StatCard
-                label="Receitas do mês"
-                value={fmt(receitasMes)}
-                icon={<ArrowUpCircle size={20} />}
-                colorClass="text-emerald-600"
-                bgClass="bg-emerald-50"
-              />
-              <StatCard
-                label="Despesas do mês"
-                value={fmt(despesasMes)}
-                icon={<ArrowDownCircle size={20} />}
-                colorClass="text-red-600"
-                bgClass="bg-red-50"
-              />
-              <StatCard
-                label="Saldo do mês"
-                value={fmt(saldoMes)}
-                icon={<TrendingUp size={20} />}
-                colorClass={`text-${saldoMesColor}-600`}
-                bgClass={`bg-${saldoMesColor}-50`}
-              />
+              <StatCard label="Receitas do mês"  value={fmt(receitasMes)}  icon={<ArrowUpCircle size={20} />}   color="emerald" />
+              <StatCard label="Despesas do mês"  value={fmt(despesasMes)}  icon={<ArrowDownCircle size={20} />} color="red" />
+              <StatCard label="Saldo do mês"     value={fmt(saldoMes)}     icon={<TrendingUp size={20} />}      color={saldoMesColor} />
             </div>
           </section>
 
           {/* Acumulado total */}
           <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               Acumulado total
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <StatCard
-                label="Total Receitas"
-                value={fmt(totalReceitas)}
-                icon={<ArrowUpCircle size={20} />}
-                colorClass="text-emerald-600"
-                bgClass="bg-emerald-50"
-              />
-              <StatCard
-                label="Total Despesas"
-                value={fmt(totalDespesas)}
-                icon={<ArrowDownCircle size={20} />}
-                colorClass="text-red-600"
-                bgClass="bg-red-50"
-              />
-              <StatCard
-                label="Saldo Líquido"
-                value={fmt(saldoLiquido)}
-                icon={<TrendingUp size={20} />}
-                colorClass={`text-${saldoTotalColor}-600`}
-                bgClass={`bg-${saldoTotalColor}-50`}
-              />
+              <StatCard label="Total Receitas" value={fmt(totalReceitas)} icon={<ArrowUpCircle size={20} />}   color="emerald" />
+              <StatCard label="Total Despesas" value={fmt(totalDespesas)} icon={<ArrowDownCircle size={20} />} color="red" />
+              <StatCard label="Saldo Líquido"  value={fmt(saldoLiquido)} icon={<TrendingUp size={20} />}      color={saldoTotalColor} />
             </div>
           </section>
 
           {/* Contadores */}
           <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               Cadastros
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <CountCard label="Pessoas" count={nPessoas} icon={<Users size={20} />} />
-              <CountCard label="Categorias" count={nCategorias} icon={<Tag size={20} />} />
+              <CountCard label="Pessoas"    count={nPessoas}    icon={<Users size={20} />}  />
+              <CountCard label="Categorias" count={nCategorias} icon={<Tag size={20} />}    />
               <CountCard label="Transações" count={nTransacoes} icon={<Layers size={20} />} />
             </div>
           </section>

@@ -112,7 +112,7 @@ export default function TransacoesPage() {
     if (t.tipo === "Ambas") {
       return (
         <span
-          className="font-semibold text-violet-600"
+          className="font-semibold text-violet-600 dark:text-violet-400"
           title={`Receita: ${fmtBRL(t.valorReceita ?? 0)} | Despesa: ${fmtBRL(t.valorDespesa ?? 0)}`}
         >
           {fmtBRL(t.valor)}
@@ -120,7 +120,7 @@ export default function TransacoesPage() {
       );
     }
     return (
-      <span className={`font-semibold ${t.tipo === "Receita" ? "text-emerald-600" : "text-red-600"}`}>
+      <span className={`font-semibold ${t.tipo === "Receita" ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
         {fmtBRL(t.valor)}
       </span>
     );
@@ -130,8 +130,8 @@ export default function TransacoesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Transações</h1>
-        <p className="text-sm text-gray-500">Registre receitas e despesas</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Transações</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Registre receitas e despesas</p>
       </div>
 
       {/* Form card */}
@@ -144,7 +144,7 @@ export default function TransacoesPage() {
         </CardHeader>
         <CardContent className="pt-4">
           {erro && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
               <AlertTriangle size={15} className="shrink-0" />
               {erro}
             </div>
@@ -182,7 +182,7 @@ export default function TransacoesPage() {
                   {!ehMenor && <option value={3}>Ambas</option>}
                 </Select>
                 {ehMenor && (
-                  <p className="text-xs text-red-500">Menores de 18: apenas despesas permitidas.</p>
+                  <p className="text-xs text-red-500 dark:text-red-400">Menores de 18: apenas despesas permitidas.</p>
                 )}
               </div>
 
@@ -284,33 +284,33 @@ export default function TransacoesPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-gray-50">
+                <tr className="border-b bg-gray-50 dark:bg-gray-700/50">
                   {["#", "Data", "Pessoa", "Tipo", "Categoria", "Descrição", "Valor", "Ações"].map((h) => (
                     <th
                       key={h}
-                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
                     >
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {transacoes.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-400">{t.id}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                  <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                    <td className="px-4 py-3 text-gray-400 dark:text-gray-500">{t.id}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-400">
                       {new Date(t.data + "T00:00:00").toLocaleDateString("pt-BR")}
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-800">{t.pessoaNome}</td>
+                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">{t.pessoaNome}</td>
                     <td className="px-4 py-3">{tipoBadge(t.tipo)}</td>
-                    <td className="px-4 py-3 text-gray-600">{t.categoriaDescricao}</td>
-                    <td className="px-4 py-3 text-gray-700">{t.descricao}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{t.categoriaDescricao}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t.descricao}</td>
                     <td className="px-4 py-3">{valorDisplay(t)}</td>
                     <td className="px-4 py-3">
                       {confirmDeleteId === t.id ? (
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-semibold text-red-600">Deletar?</span>
+                          <span className="text-xs font-semibold text-red-600 dark:text-red-400">Deletar?</span>
                           <Button size="sm" variant="destructive" onClick={() => handleDeletar(t.id)}>
                             Confirmar
                           </Button>
@@ -328,7 +328,7 @@ export default function TransacoesPage() {
                 ))}
                 {transacoes.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-400">
+                    <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
                       Nenhuma transação registrada.
                     </td>
                   </tr>

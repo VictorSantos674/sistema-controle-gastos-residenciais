@@ -76,8 +76,8 @@ export default function PessoasPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Pessoas</h1>
-        <p className="text-sm text-gray-500">Gerencie as pessoas do sistema</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Pessoas</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Gerencie as pessoas do sistema</p>
       </div>
 
       {/* Form card */}
@@ -90,7 +90,7 @@ export default function PessoasPage() {
         </CardHeader>
         <CardContent className="pt-4">
           {erro && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
               <AlertTriangle size={15} className="shrink-0" />
               {erro}
             </div>
@@ -138,28 +138,28 @@ export default function PessoasPage() {
         <CardContent className="p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">#</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Nome</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Idade</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Ações</th>
+              <tr className="border-b bg-gray-50 dark:bg-gray-700/50">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">#</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Nome</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Idade</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {pessoas.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-400">{p.id}</td>
-                  <td className="px-4 py-3 font-medium text-gray-800">
+                <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                  <td className="px-4 py-3 text-gray-400 dark:text-gray-500">{p.id}</td>
+                  <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">
                     {p.nome}
                     {p.idade < 18 && (
                       <Badge variant="despesa" className="ml-2">Menor</Badge>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{p.idade} anos</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{p.idade} anos</td>
                   <td className="px-4 py-3">
                     {confirmDeleteId === p.id ? (
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-semibold text-red-600">
+                        <span className="text-xs font-semibold text-red-600 dark:text-red-400">
                           Deletar e todas as transações?
                         </span>
                         <Button size="sm" variant="destructive" onClick={() => handleDeletar(p.id)}>
@@ -184,7 +184,7 @@ export default function PessoasPage() {
               ))}
               {pessoas.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-400">
+                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
                     Nenhuma pessoa cadastrada.
                   </td>
                 </tr>
