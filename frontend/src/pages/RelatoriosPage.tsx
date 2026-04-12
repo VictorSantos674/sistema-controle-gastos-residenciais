@@ -1,4 +1,6 @@
-import { RefreshCw } from "lucide-react";
+import autoTable from "jspdf-autotable";
+import jsPDF from "jspdf";
+import { Download, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Bar,
@@ -95,6 +97,94 @@ export default function RelatoriosPage() {
       ? MESES[filtroMes - 1]
       : "Todos os períodos";
 
+  const exportarPDF = () => {
+    const doc = new jsPDF();
+    const agora = new Date().toLocaleDateString("pt-BR");
+
+    // Cabeçalho
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("Relatório Financeiro", 14, 20);
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Período: ${labelPeriodo}`, 14, 29);
+
+    doc.setFontSize(9);
+    doc.setTextColor(130);
+    doc.text(`Gerado em: ${agora}`, 14, 36);
+    doc.setTextColor(0);
+
+    let y = 46;
+
+    // Totais por Pessoa
+    if (porPessoa && porPessoa.pessoas.length > 0) {
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Totais por Pessoa", 14, y);
+
+      const pessoaBody = porPessoa.pessoas.map((p) => [
+        p.nomePessoa,
+        fmt(p.totalReceitas),
+        fmt(p.totalDespesas),
+        fmt(p.saldo),
+      ]);
+      pessoaBody.push([
+        "Total Geral",
+        fmt(porPessoa.totalGeralReceitas),
+        fmt(porPessoa.totalGeralDespesas),
+        fmt(porPessoa.saldoLiquido),
+      ]);
+
+      autoTable(doc, {
+        startY: y + 4,
+        head: [["Pessoa", "Receitas", "Despesas", "Saldo"]],
+        body: pessoaBody,
+        headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: "bold" },
+        styles: { fontSize: 10 },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
+        didParseCell: (data) => {
+          if (data.section === "body" && data.row.index === pessoaBody.length - 1) {
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.fillColor = [30, 41, 59];
+            data.cell.styles.textColor = 255;
+          }
+        },
+      });
+
+      y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 14;
+    }
+
+    // Totais por Categoria
+    if (porCategoria && porCategoria.categorias.length > 0) {
+      if (y > 230) { doc.addPage(); y = 20; }
+
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Totais por Categoria", 14, y);
+
+      const catBody = porCategoria.categorias.map((c) => [
+        c.descricaoCategoria,
+        c.finalidade,
+        c.finalidade === "Despesa" ? "—" : fmt(c.totalReceitas),
+        c.finalidade === "Receita" ? "—" : fmt(c.totalDespesas),
+        fmt(c.saldo),
+      ]);
+
+      autoTable(doc, {
+        startY: y + 4,
+        head: [["Categoria", "Finalidade", "Receitas", "Despesas", "Saldo"]],
+        body: catBody,
+        headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: "bold" },
+        styles: { fontSize: 10 },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
+      });
+    }
+
+    const nomeArquivo = `relatorio-${labelPeriodo.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")}.pdf`;
+    doc.save(nomeArquivo);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -103,10 +193,21 @@ export default function RelatoriosPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Relatórios</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Análise financeira por pessoa e categoria</p>
         </div>
-        <Button size="sm" variant="outline" onClick={carregar} disabled={loading}>
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={exportarPDF}
+            disabled={loading || (!porPessoa && !porCategoria)}
+          >
+            <Download size={14} />
+            Exportar PDF
+          </Button>
+          <Button size="sm" variant="outline" onClick={carregar} disabled={loading}>
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Filtro de período */}
@@ -155,7 +256,7 @@ export default function RelatoriosPage() {
 
       {/* Totais por Pessoa */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-4">
           <CardTitle>Totais por Pessoa</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -221,7 +322,7 @@ export default function RelatoriosPage() {
 
       {/* Totais por Categoria */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between gap-4">
             <CardTitle>Totais por Categoria</CardTitle>
             <div className="flex items-center gap-2">
