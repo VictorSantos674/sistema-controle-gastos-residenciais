@@ -35,6 +35,16 @@ public class Pessoa
     public int Idade { get; set; }
 
     /// <summary>
+    /// Chave estrangeira para o <see cref="Usuario"/> dono desta pessoa.
+    /// Garante isolamento de dados: cada usuário vê apenas suas próprias pessoas.
+    /// </summary>
+    [Required]
+    public int UsuarioId { get; set; }
+
+    /// <summary>Propriedade de navegação para o usuário dono.</summary>
+    public Usuario Usuario { get; set; } = null!;
+
+    /// <summary>
     /// Propriedade de navegação do EF Core: lista de transações desta pessoa.
     ///
     /// Configuração no <see cref="Data.AppDbContext"/>:

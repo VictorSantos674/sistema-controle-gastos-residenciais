@@ -25,6 +25,9 @@ public class AppDbContext : DbContext
 
     // ── DbSets (mapeados para tabelas no banco) ──────────────────────────────
 
+    /// <summary>Tabela <c>Usuarios</c>.</summary>
+    public DbSet<Usuario> Usuarios { get; set; }
+
     /// <summary>Tabela <c>Pessoas</c>.</summary>
     public DbSet<Pessoa> Pessoas { get; set; }
 
@@ -43,6 +46,27 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // ── Unicidade do login ────────────────────────────────────────────────
+        // Garante que dois usuários não possam ter o mesmo login no banco.
+        modelBuilder.Entity<Usuario>()
+            .HasIndex(u => u.Login)
+            .IsUnique();
+
+        // ── Relacionamento Usuario → Pessoa ───────────────────────────────────
+        // Cascade: ao deletar o usuário, todas as suas pessoas são deletadas.
+        modelBuilder.Entity<Pessoa>()
+            .HasOne(p => p.Usuario)
+            .WithMany(u => u.Pessoas)
+            .HasForeignKey(p => p.UsuarioId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ── Relacionamento Usuario → Categoria ────────────────────────────────
+        modelBuilder.Entity<Categoria>()
+            .HasOne(c => c.Usuario)
+            .WithMany(u => u.Categorias)
+            .HasForeignKey(c => c.UsuarioId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // ── Relacionamento Transacao → Pessoa ────────────────────────────────
         // DeleteBehavior.Cascade: ao excluir uma Pessoa, o banco de dados

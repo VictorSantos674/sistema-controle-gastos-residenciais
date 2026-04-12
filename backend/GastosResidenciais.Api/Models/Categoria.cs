@@ -34,6 +34,16 @@ public class Categoria
     public Finalidade Finalidade { get; set; }
 
     /// <summary>
+    /// Chave estrangeira para o <see cref="Usuario"/> dono desta categoria.
+    /// Garante isolamento de dados: cada usuário vê apenas suas próprias categorias.
+    /// </summary>
+    [Required]
+    public int UsuarioId { get; set; }
+
+    /// <summary>Propriedade de navegação para o usuário dono.</summary>
+    public Usuario Usuario { get; set; } = null!;
+
+    /// <summary>
     /// Propriedade de navegação: transações vinculadas a esta categoria.
     ///
     /// Configuração no <see cref="Data.AppDbContext"/>:
