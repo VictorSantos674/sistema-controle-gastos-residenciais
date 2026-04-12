@@ -4,43 +4,14 @@ namespace GastosResidenciais.Api.Services;
 
 /// <summary>
 /// Contrato da camada de serviço para operações com <c>Pessoa</c>.
-///
-/// <b>Por que usar interface?</b>
-/// <list type="bullet">
-///   <item>Permite trocar a implementação (ex.: outro ORM, serviço externo)
-///         sem alterar os controllers que dependem desta interface.</item>
-///   <item>Facilita testes unitários: os controllers podem ser testados
-///         com implementações mock sem necessidade de banco real.</item>
-///   <item>Registrada no contêiner DI com <c>AddScoped</c>:
-///         uma instância por requisição HTTP.</item>
-/// </list>
+/// Todos os métodos recebem <paramref name="usuarioId"/> para garantir
+/// que cada usuário acesse apenas seus próprios dados.
 /// </summary>
 public interface IPessoaService
 {
-    /// <summary>Retorna todas as pessoas cadastradas, ordenadas por nome (A-Z).</summary>
-    Task<IEnumerable<PessoaOutputDto>> ListarAsync();
-
-    /// <summary>
-    /// Retorna uma pessoa pelo seu ID.
-    /// Retorna <c>null</c> se o ID não existir — o controller mapeia para 404.
-    /// </summary>
-    Task<PessoaOutputDto?> ObterPorIdAsync(int id);
-
-    /// <summary>
-    /// Cria e persiste uma nova pessoa no banco de dados.
-    /// O ID é gerado automaticamente pelo banco.
-    /// </summary>
-    Task<PessoaOutputDto> CriarAsync(PessoaInputDto dto);
-
-    /// <summary>
-    /// Edita uma pessoa existente.
-    /// Retorna <c>null</c> se o ID não existir — o controller mapeia para 404.
-    /// </summary>
-    Task<PessoaOutputDto?> EditarAsync(int id, PessoaInputDto dto);
-
-    /// <summary>
-    /// Deleta uma pessoa e, em cascata (configurado no banco), todas as suas transações.
-    /// Retorna <c>false</c> se o ID não existir — o controller mapeia para 404.
-    /// </summary>
-    Task<bool> DeletarAsync(int id);
+    Task<IEnumerable<PessoaOutputDto>> ListarAsync(int usuarioId);
+    Task<PessoaOutputDto?> ObterPorIdAsync(int id, int usuarioId);
+    Task<PessoaOutputDto> CriarAsync(PessoaInputDto dto, int usuarioId);
+    Task<PessoaOutputDto?> EditarAsync(int id, PessoaInputDto dto, int usuarioId);
+    Task<bool> DeletarAsync(int id, int usuarioId);
 }
