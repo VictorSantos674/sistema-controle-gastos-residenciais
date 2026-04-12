@@ -1,6 +1,9 @@
+using System.Text;
 using GastosResidenciais.Api.Data;
 using GastosResidenciais.Api.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,18 +16,44 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-/// SQLite como banco de dados persistente. O arquivo gastos.db é criado automaticamente na raiz do projeto.
+/// SQLite como banco de dados persistente.
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Default")));
 
 /// Registro dos serviços de domínio via injeção de dependência.
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPessoaService, PessoaService>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<ITransacaoService, TransacaoService>();
 builder.Services.AddScoped<IRelatorioService, RelatorioService>();
 
+/// Autenticação JWT.
+/// A chave secreta é lida da variável de ambiente JWT_SECRET.
+/// Em desenvolvimento, o fallback garante que a app suba sem configuração extra.
+var jwtSecret = builder.Configuration["JWT_SECRET"]
+    ?? "dev-secret-change-in-production-min32chars!!";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer              = "GastosResidenciais",
+            ValidAudience            = "GastosResidenciais",
+            IssuerSigningKey         = new SymmetricSecurityKey(
+                                           Encoding.UTF8.GetBytes(jwtSecret))
+        };
+    });
+
+/// Política global: todos os endpoints exigem autenticação por padrão.
+/// Endpoints públicos usam [AllowAnonymous] explicitamente (ex.: AuthController).
+builder.Services.AddAuthorization();
+
 /// CORS: lê origens permitidas da variável de ambiente CORS_ORIGINS (separadas por vírgula).
-/// Fallback para localhost em desenvolvimento.
 var corsOrigins = (Environment.GetEnvironmentVariable("CORS_ORIGINS") ?? "http://localhost:5173")
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
@@ -56,5 +85,10 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseCors("FrontEnd");
+
+/// A ordem importa: Authentication deve vir antes de Authorization.
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
 await app.RunAsync();
