@@ -36,6 +36,7 @@ export default function TransacoesPage() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [form, setForm] = useState<TransacaoInput>(emptyForm);
   const [erro, setErro] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
@@ -61,31 +62,41 @@ export default function TransacoesPage() {
     const pessoa = pessoas.find((p) => p.id === id);
     const novoTipo = pessoa && pessoa.idade < 18 ? 1 : form.tipo;
     setForm({ ...form, pessoaId: id, tipo: novoTipo, categoriaId: 0 });
+    setFieldErrors((prev) => ({ ...prev, pessoaId: false }));
   };
 
   const handleChangeTipo = (tipo: number) => {
     setForm({ ...form, tipo, categoriaId: 0 });
+    setFieldErrors((prev) => ({ ...prev, categoriaId: false }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro("");
-    if (!form.pessoaId) return setErro("Selecione uma pessoa.");
-    if (!form.categoriaId) return setErro("Selecione uma categoria.");
-    if (!form.descricao.trim()) return setErro("A descrição é obrigatória.");
+
+    const errors: Record<string, boolean> = {};
+    if (!form.pessoaId) errors.pessoaId = true;
+    if (!form.categoriaId) errors.categoriaId = true;
     if (ehAmbas) {
-      if (!form.valorReceita || form.valorReceita <= 0)
-        return setErro("O valor de receita deve ser maior que zero.");
+      if (!form.valorReceita || form.valorReceita <= 0) errors.valorReceita = true;
+      if (!form.valorDespesa || form.valorDespesa <= 0) errors.valorDespesa = true;
     } else {
-      if (!form.valor || form.valor <= 0)
-        return setErro("O valor deve ser maior que zero.");
-      if (ehMenor && form.tipo === 2)
-        return setErro("Menores de 18 anos só podem registrar transações do tipo Despesa.");
+      if (!form.valor || form.valor <= 0) errors.valor = true;
+    }
+    if (ehMenor && form.tipo === 2) {
+      setErro("Menores de 18 anos só podem registrar transações do tipo Despesa.");
+      return;
+    }
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setErro("Preencha todos os campos obrigatórios marcados com *.");
+      return;
     }
     setLoading(true);
     try {
       await criarTransacao(form);
       setForm(emptyForm);
+      setFieldErrors({});
       await carregar();
     } catch (err: unknown) {
       setErro(err instanceof Error ? err.message : "Erro ao registrar transação.");
@@ -153,10 +164,11 @@ export default function TransacoesPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               {/* Pessoa */}
               <div className="space-y-1.5">
-                <Label htmlFor="pessoa">Pessoa</Label>
+                <Label htmlFor="pessoa">Pessoa <span className="text-red-500">*</span></Label>
                 <Select
                   id="pessoa"
                   value={form.pessoaId}
+                  className={fieldErrors.pessoaId ? "border-red-500 ring-1 ring-red-500" : ""}
                   onChange={(e) => handleChangePessoa(Number(e.target.value))}
                 >
                   <option value={0}>Selecione uma pessoa...</option>
@@ -170,7 +182,7 @@ export default function TransacoesPage() {
 
               {/* Tipo */}
               <div className="space-y-1.5">
-                <Label htmlFor="tipo">Tipo</Label>
+                <Label htmlFor="tipo">Tipo <span className="text-red-500">*</span></Label>
                 <Select
                   id="tipo"
                   value={form.tipo}
@@ -188,11 +200,15 @@ export default function TransacoesPage() {
 
               {/* Categoria */}
               <div className="space-y-1.5">
-                <Label htmlFor="categoria">Categoria</Label>
+                <Label htmlFor="categoria">Categoria <span className="text-red-500">*</span></Label>
                 <Select
                   id="categoria"
                   value={form.categoriaId}
-                  onChange={(e) => setForm({ ...form, categoriaId: Number(e.target.value) })}
+                  className={fieldErrors.categoriaId ? "border-red-500 ring-1 ring-red-500" : ""}
+                  onChange={(e) => {
+                    setForm({ ...form, categoriaId: Number(e.target.value) });
+                    setFieldErrors((prev) => ({ ...prev, categoriaId: false }));
+                  }}
                 >
                   <option value={0}>Selecione uma categoria...</option>
                   {categoriasFiltradas.map((c) => (
@@ -205,7 +221,7 @@ export default function TransacoesPage() {
 
               {/* Data */}
               <div className="space-y-1.5">
-                <Label htmlFor="data">Data</Label>
+                <Label htmlFor="data">Data <span className="text-red-500">*</span></Label>
                 <Input
                   id="data"
                   type="date"
@@ -217,7 +233,9 @@ export default function TransacoesPage() {
 
             {/* Descrição */}
             <div className="space-y-1.5">
-              <Label htmlFor="descricao">Descrição</Label>
+              <Label htmlFor="descricao">
+                Descrição <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(opcional)</span>
+              </Label>
               <Input
                 id="descricao"
                 maxLength={400}
@@ -231,7 +249,7 @@ export default function TransacoesPage() {
             {ehAmbas ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="valorReceita">Valor Receita (R$)</Label>
+                  <Label htmlFor="valorReceita">Valor Receita (R$) <span className="text-red-500">*</span></Label>
                   <Input
                     id="valorReceita"
                     type="number"
@@ -239,11 +257,15 @@ export default function TransacoesPage() {
                     step={0.01}
                     placeholder="0,00"
                     value={form.valorReceita || ""}
-                    onChange={(e) => setForm({ ...form, valorReceita: Number(e.target.value) })}
+                    className={fieldErrors.valorReceita ? "border-red-500 ring-1 ring-red-500" : ""}
+                    onChange={(e) => {
+                      setForm({ ...form, valorReceita: Number(e.target.value) });
+                      setFieldErrors((prev) => ({ ...prev, valorReceita: false }));
+                    }}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="valorDespesa">Valor Despesa (R$)</Label>
+                  <Label htmlFor="valorDespesa">Valor Despesa (R$) <span className="text-red-500">*</span></Label>
                   <Input
                     id="valorDespesa"
                     type="number"
@@ -251,22 +273,29 @@ export default function TransacoesPage() {
                     step={0.01}
                     placeholder="0,00"
                     value={form.valorDespesa || ""}
-                    onChange={(e) => setForm({ ...form, valorDespesa: Number(e.target.value) })}
+                    className={fieldErrors.valorDespesa ? "border-red-500 ring-1 ring-red-500" : ""}
+                    onChange={(e) => {
+                      setForm({ ...form, valorDespesa: Number(e.target.value) });
+                      setFieldErrors((prev) => ({ ...prev, valorDespesa: false }));
+                    }}
                   />
                 </div>
               </div>
             ) : (
               <div className="space-y-1.5">
-                <Label htmlFor="valor">Valor (R$)</Label>
+                <Label htmlFor="valor">Valor (R$) <span className="text-red-500">*</span></Label>
                 <Input
                   id="valor"
-                  className="max-w-[180px]"
+                  className={`max-w-[180px] ${fieldErrors.valor ? "border-red-500 ring-1 ring-red-500" : ""}`}
                   type="number"
                   min={0.01}
                   step={0.01}
                   placeholder="0,00"
                   value={form.valor || ""}
-                  onChange={(e) => setForm({ ...form, valor: Number(e.target.value) })}
+                  onChange={(e) => {
+                    setForm({ ...form, valor: Number(e.target.value) });
+                    setFieldErrors((prev) => ({ ...prev, valor: false }));
+                  }}
                 />
               </div>
             )}
@@ -285,7 +314,7 @@ export default function TransacoesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-gray-50 dark:bg-gray-700/50">
-                  {["#", "Data", "Pessoa", "Tipo", "Categoria", "Descrição", "Valor", "Ações"].map((h) => (
+                  {["Data", "Pessoa", "Tipo", "Categoria", "Descrição", "Valor", "Ações"].map((h) => (
                     <th
                       key={h}
                       className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
@@ -298,7 +327,6 @@ export default function TransacoesPage() {
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {transacoes.map((t) => (
                   <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                    <td className="px-4 py-3 text-gray-400 dark:text-gray-500">{t.id}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-400">
                       {new Date(t.data + "T00:00:00").toLocaleDateString("pt-BR")}
                     </td>
@@ -328,7 +356,7 @@ export default function TransacoesPage() {
                 ))}
                 {transacoes.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+                    <td colSpan={7} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
                       Nenhuma transação registrada.
                     </td>
                   </tr>

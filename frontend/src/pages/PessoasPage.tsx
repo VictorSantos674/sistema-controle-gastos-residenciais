@@ -139,7 +139,6 @@ export default function PessoasPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50 dark:bg-gray-700/50">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">#</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Nome</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Idade</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Ações</th>
@@ -148,7 +147,6 @@ export default function PessoasPage() {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {pessoas.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                  <td className="px-4 py-3 text-gray-400 dark:text-gray-500">{p.id}</td>
                   <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">
                     {p.nome}
                     {p.idade < 18 && (
@@ -184,7 +182,7 @@ export default function PessoasPage() {
               ))}
               {pessoas.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+                  <td colSpan={3} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
                     Nenhuma pessoa cadastrada.
                   </td>
                 </tr>
