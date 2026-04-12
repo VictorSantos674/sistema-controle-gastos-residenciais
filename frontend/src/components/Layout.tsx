@@ -1,5 +1,6 @@
-import { BarChart3, FolderOpen, Home, LayoutList, Moon, Sun, Users } from "lucide-react";
+import { BarChart3, FolderOpen, Home, LayoutList, LogOut, Moon, Sun, Users } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { cn } from "../lib/utils";
 
@@ -13,6 +14,7 @@ const navLinks = [
 
 export default function Layout() {
   const { isDark, toggle } = useDarkMode();
+  const { user, logout }   = useAuth();
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -46,16 +48,32 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* Footer — versão + toggle de tema */}
-        <div className="border-t border-slate-700/60 px-5 py-4 flex items-center justify-between">
-          <p className="text-xs text-slate-500">v1.0.0</p>
-          <button
-            onClick={toggle}
-            title={isDark ? "Mudar para modo claro" : "Mudar para modo escuro"}
-            className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-100"
-          >
-            {isDark ? <Sun size={15} /> : <Moon size={15} />}
-          </button>
+        {/* Footer — usuário logado + tema + logout */}
+        <div className="border-t border-slate-700/60 px-4 py-3 space-y-2">
+          {user && (
+            <p className="truncate text-xs font-medium text-slate-300" title={user.login}>
+              {user.login}
+            </p>
+          )}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-500">v1.0.0</p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={toggle}
+                title={isDark ? "Modo claro" : "Modo escuro"}
+                className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-100"
+              >
+                {isDark ? <Sun size={15} /> : <Moon size={15} />}
+              </button>
+              <button
+                onClick={logout}
+                title="Sair"
+                className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-red-400"
+              >
+                <LogOut size={15} />
+              </button>
+            </div>
+          </div>
         </div>
       </aside>
 
