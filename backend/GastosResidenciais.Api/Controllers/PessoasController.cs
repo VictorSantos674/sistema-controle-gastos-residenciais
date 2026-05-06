@@ -43,23 +43,25 @@ public class PessoasController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Criar([FromBody] PessoaInputDto dto)
     {
-        var resultado = await _service.CriarAsync(dto, GetUserId());
-        return CreatedAtAction(nameof(ObterPorId), new { id = resultado.Id }, resultado);
+        var (resultado, erro) = await _service.CriarAsync(dto, GetUserId());
+        if (erro is not null) return BadRequest(new { mensagem = erro });
+        return CreatedAtAction(nameof(ObterPorId), new { id = resultado!.Id }, resultado);
     }
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Editar(int id, [FromBody] PessoaInputDto dto)
     {
-        var resultado = await _service.EditarAsync(id, dto, GetUserId());
-        if (resultado is null) return NotFound();
-        return Ok(resultado);
+        var (resultado, erro) = await _service.EditarAsync(id, dto, GetUserId());
+        if (erro is null) return Ok(resultado);
+        if (erro.Contains("não encontrada", StringComparison.OrdinalIgnoreCase)) return NotFound(new { mensagem = erro });
+        return BadRequest(new { mensagem = erro });
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Deletar(int id)
     {
-        var deletado = await _service.DeletarAsync(id, GetUserId());
-        if (!deletado) return NotFound();
+        var erro = await _service.DeletarAsync(id, GetUserId());
+        if (erro is not null) return NotFound(new { mensagem = erro });
         return NoContent();
     }
 }

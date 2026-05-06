@@ -39,38 +39,55 @@ public class PessoaService : IPessoaService
     }
 
     /// <inheritdoc/>
-    public async Task<PessoaOutputDto> CriarAsync(PessoaInputDto dto, int usuarioId)
+    public async Task<(PessoaOutputDto? Resultado, string? Erro)> CriarAsync(PessoaInputDto dto, int usuarioId)
     {
+        var erro = Validar(dto);
+        if (erro is not null)
+            return (null, erro);
+
         var pessoa = new Pessoa { Nome = dto.Nome, Idade = dto.Idade, UsuarioId = usuarioId };
         _context.Pessoas.Add(pessoa);
         await _context.SaveChangesAsync();
 
-        return new PessoaOutputDto { Id = pessoa.Id, Nome = pessoa.Nome, Idade = pessoa.Idade };
+        return (new PessoaOutputDto { Id = pessoa.Id, Nome = pessoa.Nome, Idade = pessoa.Idade }, null);
     }
 
     /// <inheritdoc/>
-    public async Task<PessoaOutputDto?> EditarAsync(int id, PessoaInputDto dto, int usuarioId)
+    public async Task<(PessoaOutputDto? Resultado, string? Erro)> EditarAsync(int id, PessoaInputDto dto, int usuarioId)
     {
+        var erro = Validar(dto);
+        if (erro is not null)
+            return (null, erro);
+
         var pessoa = await _context.Pessoas
             .FirstOrDefaultAsync(p => p.Id == id && p.UsuarioId == usuarioId);
-        if (pessoa is null) return null;
+        if (pessoa is null) return (null, "Pessoa não encontrada.");
 
         pessoa.Nome  = dto.Nome;
         pessoa.Idade = dto.Idade;
         await _context.SaveChangesAsync();
 
-        return new PessoaOutputDto { Id = pessoa.Id, Nome = pessoa.Nome, Idade = pessoa.Idade };
+        return (new PessoaOutputDto { Id = pessoa.Id, Nome = pessoa.Nome, Idade = pessoa.Idade }, null);
     }
 
     /// <inheritdoc/>
-    public async Task<bool> DeletarAsync(int id, int usuarioId)
+    public async Task<string?> DeletarAsync(int id, int usuarioId)
     {
         var pessoa = await _context.Pessoas
+            .Include(p => p.Transacoes)
             .FirstOrDefaultAsync(p => p.Id == id && p.UsuarioId == usuarioId);
-        if (pessoa is null) return false;
+        if (pessoa is null) return "Pessoa não encontrada.";
 
         _context.Pessoas.Remove(pessoa);
         await _context.SaveChangesAsync();
-        return true;
+        return null;
+    }
+
+    private static string? Validar(PessoaInputDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Nome))
+            return "O nome é obrigatório.";
+
+        return null;
     }
 }
