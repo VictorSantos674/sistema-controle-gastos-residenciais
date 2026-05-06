@@ -6,6 +6,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{1AE8
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GastosResidenciais.Api", "backend\GastosResidenciais.Api\GastosResidenciais.Api.csproj", "{B0FDD632-0252-BE77-E620-C5C64F9794AD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GastosResidenciais.Tests", "backend\GastosResidenciais.Tests\GastosResidenciais.Tests.csproj", "{16E7043F-A8FE-4BB0-972E-D0086EB4B97E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -16,12 +18,17 @@ Global
 		{B0FDD632-0252-BE77-E620-C5C64F9794AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B0FDD632-0252-BE77-E620-C5C64F9794AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B0FDD632-0252-BE77-E620-C5C64F9794AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{16E7043F-A8FE-4BB0-972E-D0086EB4B97E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{16E7043F-A8FE-4BB0-972E-D0086EB4B97E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{16E7043F-A8FE-4BB0-972E-D0086EB4B97E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{16E7043F-A8FE-4BB0-972E-D0086EB4B97E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B0FDD632-0252-BE77-E620-C5C64F9794AD} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
+		{16E7043F-A8FE-4BB0-972E-D0086EB4B97E} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2CEEFE75-AF8C-4E45-8E20-BAEE4F0589CF}
