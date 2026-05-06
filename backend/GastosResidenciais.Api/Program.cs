@@ -1,9 +1,12 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using GastosResidenciais.Api.Data;
 using GastosResidenciais.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,9 +19,14 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-/// SQLite como banco de dados persistente.
+/// PostgreSQL como banco de dados persistente.
+/// Em produção, Railway fornece DATABASE_URL no formato URL.
+var connectionString = BuildPostgresConnectionString(
+    builder.Configuration["DATABASE_URL"],
+    builder.Configuration.GetConnectionString("Default"));
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("Default")));
+    options.UseNpgsql(connectionString));
 
 /// Registro dos serviços de domínio via injeção de dependência.
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -26,6 +34,7 @@ builder.Services.AddScoped<IPessoaService, PessoaService>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<ITransacaoService, TransacaoService>();
 builder.Services.AddScoped<IRelatorioService, RelatorioService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 /// Autenticação JWT.
 /// A chave secreta é lida da variável de ambiente JWT_SECRET.
@@ -50,8 +59,39 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 /// Política global: todos os endpoints exigem autenticação por padrão.
-/// Endpoints públicos usam [AllowAnonymous] explicitamente (ex.: AuthController).
-builder.Services.AddAuthorization();
+/// Endpoints públicos usam [AllowAnonymous] explicitamente (ex.: AuthController e /health).
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.Headers.RetryAfter = "60";
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new { mensagem = "Muitas tentativas. Tente novamente em 60 segundos." },
+            cancellationToken: token);
+    };
+
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+});
+
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>();
 
 /// CORS: lê origens permitidas da variável de ambiente CORS_ORIGINS (separadas por vírgula).
 var corsOrigins = (Environment.GetEnvironmentVariable("CORS_ORIGINS") ?? "http://localhost:5173")
@@ -67,11 +107,12 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-/// Aplica as migrations pendentes e cria o banco de dados automaticamente ao iniciar.
+/// Aplica as migrations pendentes automaticamente ao iniciar.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.EnsureCreatedAsync();
+    if (db.Database.IsRelational())
+        await db.Database.MigrateAsync();
 }
 
 app.UseExceptionHandler(errApp => errApp.Run(async ctx =>
@@ -85,10 +126,35 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseCors("FrontEnd");
+app.UseRateLimiter();
 
 /// A ordem importa: Authentication deve vir antes de Authorization.
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHealthChecks("/health").AllowAnonymous();
 app.MapControllers();
 await app.RunAsync();
+
+static string BuildPostgresConnectionString(string? databaseUrl, string? fallback)
+{
+    if (string.IsNullOrWhiteSpace(databaseUrl))
+        return fallback ?? throw new InvalidOperationException("DATABASE_URL não configurado.");
+
+    var uri = new Uri(databaseUrl);
+    var userInfo = uri.UserInfo.Split(':', 2);
+
+    var builder = new NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port > 0 ? uri.Port : 5432,
+        Database = uri.AbsolutePath.TrimStart('/'),
+        Username = Uri.UnescapeDataString(userInfo[0]),
+        Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty,
+        SslMode = SslMode.Require
+    };
+
+    return builder.ConnectionString;
+}
+
+public partial class Program;

@@ -38,11 +38,23 @@ public class CategoriasController : ControllerBase
         return StatusCode(201, resultado);
     }
 
+    /// <summary>
+    /// PUT /api/categorias/{id} — Edita uma categoria existente.
+    /// </summary>
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Editar(int id, [FromBody] CategoriaInputDto dto)
+    {
+        var resultado = await _service.EditarAsync(id, dto, GetUserId());
+        if (resultado is null) return NotFound(new { mensagem = "Categoria não encontrada." });
+        return Ok(resultado);
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Deletar(int id)
     {
         var erro = await _service.DeletarAsync(id, GetUserId());
-        if (erro is not null) return BadRequest(new { mensagem = erro });
-        return NoContent();
+        if (erro is null) return NoContent();
+        if (erro.Contains("não encontrada", StringComparison.OrdinalIgnoreCase)) return NotFound(new { mensagem = erro });
+        return Conflict(new { mensagem = erro });
     }
 }

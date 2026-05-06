@@ -2,6 +2,7 @@ using GastosResidenciais.Api.DTOs;
 using GastosResidenciais.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace GastosResidenciais.Api.Controllers;
 
@@ -29,6 +30,7 @@ public class AuthController : ControllerBase
     /// Retorna 201 com o JWT em caso de sucesso ou 400 se o login já existir.
     /// </summary>
     [HttpPost("registrar")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Registrar([FromBody] RegistrarDto dto)
     {
         var (resultado, erro) = await _service.RegistrarAsync(dto);
@@ -41,6 +43,7 @@ public class AuthController : ControllerBase
     /// Retorna 200 com o JWT ou 401 se as credenciais forem inválidas.
     /// </summary>
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
         var (resultado, erro) = await _service.LoginAsync(dto);

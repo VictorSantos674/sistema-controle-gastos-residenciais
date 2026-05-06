@@ -15,7 +15,7 @@ public class Pessoa
 {
     /// <summary>
     /// Identificador único gerado automaticamente pelo banco de dados (auto-increment).
-    /// Nunca deve ser definido pelo cliente — é papel exclusivo do EF Core / SQLite.
+    /// Nunca deve ser definido pelo cliente — é papel exclusivo do EF Core / banco de dados.
     /// </summary>
     public int Id { get; set; }
 

@@ -24,10 +24,13 @@ public class TransacoesController : ControllerBase
     private int GetUserId() =>
         int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
+    /// <summary>
+    /// GET /api/transacoes?page=1&pageSize=20 — Lista transações paginadas.
+    /// </summary>
     [HttpGet]
-    public async Task<IActionResult> Listar()
+    public async Task<IActionResult> Listar([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var resultado = await _service.ListarAsync(GetUserId());
+        var resultado = await _service.ListarAsync(GetUserId(), page, pageSize);
         return Ok(resultado);
     }
 
@@ -37,6 +40,18 @@ public class TransacoesController : ControllerBase
         var (resultado, erro) = await _service.CriarAsync(dto, GetUserId());
         if (erro is not null) return BadRequest(new { mensagem = erro });
         return StatusCode(201, resultado);
+    }
+
+    /// <summary>
+    /// PUT /api/transacoes/{id} — Edita uma transação existente.
+    /// </summary>
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Editar(int id, [FromBody] TransacaoInputDto dto)
+    {
+        var (resultado, erro) = await _service.EditarAsync(id, dto, GetUserId());
+        if (erro is null) return Ok(resultado);
+        if (erro.Contains("não encontrada", StringComparison.OrdinalIgnoreCase)) return NotFound(new { mensagem = erro });
+        return BadRequest(new { mensagem = erro });
     }
 
     [HttpDelete("{id}")]

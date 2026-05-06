@@ -112,3 +112,25 @@ public class TransacaoOutputDto
     /// <summary>Data da transação.</summary>
     public DateOnly Data { get; set; }
 }
+
+/// <summary>
+/// Envelope de paginação para listas retornadas pela API.
+/// </summary>
+/// <typeparam name="T">Tipo dos itens retornados em <see cref="Data"/>.</typeparam>
+public class PaginatedResponseDto<T>
+{
+    /// <summary>Itens da página atual.</summary>
+    public IEnumerable<T> Data { get; set; } = new List<T>();
+
+    /// <summary>Total de registros disponíveis antes da paginação.</summary>
+    public int Total { get; set; }
+
+    /// <summary>Página atual, iniciando em 1.</summary>
+    public int Page { get; set; }
+
+    /// <summary>Quantidade máxima de registros por página.</summary>
+    public int PageSize { get; set; }
+
+    /// <summary>Total de páginas calculado a partir de <see cref="Total"/> e <see cref="PageSize"/>.</summary>
+    public int TotalPages { get; set; }
+}

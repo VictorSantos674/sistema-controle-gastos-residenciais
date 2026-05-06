@@ -77,7 +77,7 @@ public class Transacao
     /// <summary>
     /// Data em que a transação foi realizada.
     /// Padrão: data de hoje se não informada pelo cliente.
-    /// Armazenado como TEXT no SQLite no formato ISO 8601 (yyyy-MM-dd).
+    /// Armazenado como <c>date</c> no PostgreSQL.
     /// </summary>
     [Required]
     public DateOnly Data { get; set; } = DateOnly.FromDateTime(DateTime.Today);
