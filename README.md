@@ -8,11 +8,11 @@ Sistema web para controle de gastos residenciais com autenticação por usuário
 |--------|------------|
 | Back-end | ASP.NET Core 10 Web API |
 | Banco | PostgreSQL via Entity Framework Core migrations |
-| Auth | JWT Bearer + BCrypt |
+| Auth | JWT Bearer curto + refresh token em cookie HttpOnly + BCrypt |
 | Segurança | Rate limiter nativo para endpoints de autenticação |
 | Front-end | React 18 + TypeScript + Vite |
 | UI | Tailwind CSS v4 + shadcn/ui + lucide-react |
-| HTTP | Axios com interceptor JWT |
+| HTTP | Axios com `withCredentials` e refresh automático em 401 |
 | PDF | jsPDF + jspdf-autotable |
 
 ## Estrutura do projeto
@@ -47,6 +47,7 @@ frontend/
 | `JWT_SECRET` | Chave secreta para assinar tokens JWT, mínimo 32 caracteres | Sim |
 | `PORT` | Porta injetada pelo Railway | Sim no Railway |
 | `CORS_ORIGINS` | Origens permitidas separadas por vírgula | Sim |
+| `ASPNETCORE_ENVIRONMENT` | Use `Production` no Railway para execução em modo produção com cookies seguros em HTTPS | Sim |
 
 Em desenvolvimento, se `DATABASE_URL` não existir, a API usa `ConnectionStrings:Default` do `appsettings.json`. Se `JWT_SECRET` não existir, há fallback inseguro apenas para desenvolvimento.
 
@@ -68,7 +69,7 @@ dotnet ef migrations add InitialCreate
 dotnet ef database update
 ```
 
-Para produção no Railway, configure `DATABASE_URL`, `JWT_SECRET` e `CORS_ORIGINS`. O health check pode ser monitorado em:
+Para produção no Railway, configure `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS` e `ASPNETCORE_ENVIRONMENT=Production`. O health check pode ser monitorado em:
 
 ```text
 GET /health
@@ -114,7 +115,9 @@ O back-end usa o `Dockerfile` do projeto da API. As migrations são aplicadas no
 
 ## Funcionalidades
 
-- Autenticação com registro/login, JWT no `localStorage` e redirecionamento em 401.
+- Autenticação com access token JWT em memória, validade de 15 minutos, e refresh token opaco em cookie `HttpOnly`, `Secure`, `SameSite=Strict`, com rotação a cada refresh.
+- O frontend não grava mais JWT no `localStorage`; ao iniciar, chama `POST /api/auth/refresh` para restaurar a sessão se o cookie ainda estiver válido.
+- O interceptor Axios tenta renovar o access token em respostas 401 antes de redirecionar para `/login`.
 - Rate limiting em `POST /api/auth/login` e `POST /api/auth/registrar`: 5 tentativas por IP por minuto, com `429` e header `Retry-After`.
 - CRUD de pessoas.
 - CRUD de categorias, com bloqueio de deleção quando houver transações vinculadas.
@@ -127,8 +130,10 @@ O back-end usa o `Dockerfile` do projeto da API. As migrations são aplicadas no
 
 | Método | Rota | Descrição | Auth |
 |--------|------|-----------|------|
-| POST | `/api/auth/registrar` | Cria usuário e retorna token | Não |
-| POST | `/api/auth/login` | Autentica usuário e retorna token | Não |
+| POST | `/api/auth/registrar` | Cria usuário, retorna access token e emite refresh cookie | Não |
+| POST | `/api/auth/login` | Autentica usuário, retorna access token e emite refresh cookie | Não |
+| POST | `/api/auth/refresh` | Rotaciona refresh cookie e retorna novo access token | Não |
+| POST | `/api/auth/logout` | Invalida refresh token e expira cookie | Não |
 | GET | `/api/pessoas` | Lista pessoas | Sim |
 | POST | `/api/pessoas` | Cria pessoa | Sim |
 | PUT | `/api/pessoas/{id}` | Edita pessoa | Sim |
