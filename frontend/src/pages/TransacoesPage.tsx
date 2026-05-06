@@ -1,8 +1,8 @@
-import { AlertTriangle, PlusCircle, Trash2 } from "lucide-react";
+import { AlertTriangle, Edit3, PlusCircle, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { listarCategorias } from "../api/categorias";
 import { listarPessoas } from "../api/pessoas";
-import { type TransacaoInput, criarTransacao, deletarTransacao, listarTransacoes } from "../api/transacoes";
+import { type TransacaoInput, criarTransacao, deletarTransacao, editarTransacao, listarTransacoes } from "../api/transacoes";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -39,14 +39,40 @@ export default function TransacoesPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [sectionErrors, setSectionErrors] = useState<{ transacoes?: string; pessoas?: string; categorias?: string }>({});
 
   const carregar = async () => {
-    const [t, p, c] = await Promise.all([listarTransacoes(), listarPessoas(), listarCategorias()]);
-    setTransacoes(t);
-    setPessoas(p);
-    setCategorias(c);
+    setSectionErrors({});
+    const [t, p, c] = await Promise.allSettled([
+      listarTransacoes({ page, pageSize }),
+      listarPessoas(),
+      listarCategorias(),
+    ]);
+    const errors: { transacoes?: string; pessoas?: string; categorias?: string } = {};
+
+    if (t.status === "fulfilled") {
+      setTransacoes(t.value.data);
+      setTotal(t.value.total);
+      setTotalPages(Math.max(t.value.totalPages, 1));
+    } else {
+      setTransacoes([]);
+      errors.transacoes = "Não foi possível carregar as transações.";
+    }
+
+    if (p.status === "fulfilled") setPessoas(p.value);
+    else errors.pessoas = "Não foi possível carregar as pessoas.";
+
+    if (c.status === "fulfilled") setCategorias(c.value);
+    else errors.categorias = "Não foi possível carregar as categorias.";
+
+    setSectionErrors(errors);
   };
-  useEffect(() => { carregar(); }, []);
+  useEffect(() => { carregar(); }, [page]);
 
   const pessoaSelecionada = pessoas.find((p) => p.id === form.pessoaId);
   const ehMenor = !!(pessoaSelecionada && pessoaSelecionada.idade < 18);
@@ -83,7 +109,7 @@ export default function TransacoesPage() {
     } else {
       if (!form.valor || form.valor <= 0) errors.valor = true;
     }
-    if (ehMenor && form.tipo === 2) {
+    if (ehMenor && (form.tipo === 2 || form.tipo === 3)) {
       setErro("Menores de 18 anos só podem registrar transações do tipo Despesa.");
       return;
     }
@@ -94,8 +120,10 @@ export default function TransacoesPage() {
     }
     setLoading(true);
     try {
-      await criarTransacao(form);
+      if (editId) await editarTransacao(editId, form);
+      else await criarTransacao(form);
       setForm(emptyForm);
+      setEditId(null);
       setFieldErrors({});
       await carregar();
     } catch (err: unknown) {
@@ -115,6 +143,31 @@ export default function TransacoesPage() {
       setConfirmDeleteId(null);
       setErro(err instanceof Error ? err.message : "Erro ao deletar transação.");
     }
+  };
+
+  const handleEditar = (transacao: Transacao) => {
+    const tipo = transacao.tipo === "Receita" ? 2 : transacao.tipo === "Ambas" ? 3 : 1;
+    setEditId(transacao.id);
+    setForm({
+      descricao: transacao.descricao,
+      valor: transacao.tipo === "Ambas" ? 0 : transacao.valor,
+      valorReceita: transacao.valorReceita ?? 0,
+      valorDespesa: transacao.valorDespesa ?? 0,
+      tipo,
+      categoriaId: transacao.categoriaId,
+      pessoaId: transacao.pessoaId,
+      data: transacao.data,
+    });
+    setErro("");
+    setFieldErrors({});
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelarEdicao = () => {
+    setEditId(null);
+    setForm(emptyForm);
+    setFieldErrors({});
+    setErro("");
   };
 
   const valorDisplay = (t: Transacao) => {
@@ -150,7 +203,7 @@ export default function TransacoesPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <PlusCircle size={16} />
-            Nova Transação
+            {editId ? "Editar Transação" : "Nova Transação"}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-4">
@@ -158,6 +211,12 @@ export default function TransacoesPage() {
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300">
               <AlertTriangle size={15} className="shrink-0" />
               {erro}
+            </div>
+          )}
+          {(sectionErrors.pessoas || sectionErrors.categorias) && (
+            <div className="mb-4 space-y-1 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+              {sectionErrors.pessoas && <p>{sectionErrors.pessoas}</p>}
+              {sectionErrors.categorias && <p>{sectionErrors.categorias}</p>}
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -300,9 +359,16 @@ export default function TransacoesPage() {
               </div>
             )}
 
-            <Button type="submit" disabled={loading}>
-              {loading ? "Registrando..." : "Registrar Transação"}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={loading}>
+                {loading ? "Salvando..." : editId ? "Salvar alterações" : "Registrar Transação"}
+              </Button>
+              {editId && (
+                <Button type="button" variant="outline" onClick={cancelarEdicao}>
+                  <X size={14} /> Cancelar
+                </Button>
+              )}
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -310,6 +376,11 @@ export default function TransacoesPage() {
       {/* Table card */}
       <Card>
         <CardContent className="p-0">
+          {sectionErrors.transacoes && (
+            <div className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300">
+              {sectionErrors.transacoes}
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -347,9 +418,14 @@ export default function TransacoesPage() {
                           </Button>
                         </div>
                       ) : (
-                        <Button size="sm" variant="destructive" onClick={() => setConfirmDeleteId(t.id)}>
-                          <Trash2 size={13} /> Deletar
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" onClick={() => handleEditar(t)}>
+                            <Edit3 size={13} /> Editar
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => setConfirmDeleteId(t.id)}>
+                            <Trash2 size={13} /> Deletar
+                          </Button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -363,6 +439,19 @@ export default function TransacoesPage() {
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
+            <span>
+              Página {page} de {totalPages} • {total} transações
+            </span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                Anterior
+              </Button>
+              <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                Próxima
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

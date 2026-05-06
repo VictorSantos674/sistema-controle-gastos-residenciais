@@ -12,5 +12,8 @@ export const listarCategorias = (): Promise<Categoria[]> =>
 export const criarCategoria = (data: CategoriaInput): Promise<Categoria> =>
   client.post<Categoria>("/api/categorias", data).then((r) => r.data);
 
+export const editarCategoria = (id: number, data: CategoriaInput): Promise<Categoria> =>
+  client.put<Categoria>(`/api/categorias/${id}`, data).then((r) => r.data);
+
 export const deletarCategoria = (id: number): Promise<void> =>
   client.delete(`/api/categorias/${id}`).then(() => undefined);

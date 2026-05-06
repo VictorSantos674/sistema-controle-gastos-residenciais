@@ -1,6 +1,6 @@
-import { AlertTriangle, FolderPlus, Trash2 } from "lucide-react";
+import { AlertTriangle, Edit3, FolderPlus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { type CategoriaInput, criarCategoria, deletarCategoria, listarCategorias } from "../api/categorias";
+import { type CategoriaInput, criarCategoria, deletarCategoria, editarCategoria, listarCategorias } from "../api/categorias";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -23,6 +23,7 @@ export default function CategoriasPage() {
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [editId, setEditId] = useState<number | null>(null);
 
   const carregar = async () => setCategorias(await listarCategorias());
   useEffect(() => { carregar(); }, []);
@@ -33,8 +34,10 @@ export default function CategoriasPage() {
     if (!form.descricao.trim()) return setErro("A descrição é obrigatória.");
     setLoading(true);
     try {
-      await criarCategoria(form);
+      if (editId) await editarCategoria(editId, form);
+      else await criarCategoria(form);
       setForm(emptyForm);
+      setEditId(null);
       await carregar();
     } catch (err: unknown) {
       setErro(err instanceof Error ? err.message : "Erro ao salvar categoria.");
@@ -55,6 +58,21 @@ export default function CategoriasPage() {
     }
   };
 
+  const handleEditar = (categoria: Categoria) => {
+    setEditId(categoria.id);
+    setForm({
+      descricao: categoria.descricao,
+      finalidade: categoria.finalidade === "Receita" ? 2 : categoria.finalidade === "Ambas" ? 3 : 1,
+    });
+    setErro("");
+  };
+
+  const cancelarEdicao = () => {
+    setEditId(null);
+    setForm(emptyForm);
+    setErro("");
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -68,7 +86,7 @@ export default function CategoriasPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FolderPlus size={16} />
-            Nova Categoria
+            {editId ? "Editar Categoria" : "Nova Categoria"}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-4">
@@ -102,9 +120,16 @@ export default function CategoriasPage() {
                 <option value={3}>Ambas</option>
               </Select>
             </div>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Salvando..." : "Cadastrar"}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={loading}>
+                {loading ? "Salvando..." : editId ? "Salvar alterações" : "Cadastrar"}
+              </Button>
+              {editId && (
+                <Button type="button" variant="outline" onClick={cancelarEdicao}>
+                  <X size={14} /> Cancelar
+                </Button>
+              )}
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -137,9 +162,14 @@ export default function CategoriasPage() {
                         </Button>
                       </div>
                     ) : (
-                      <Button size="sm" variant="destructive" onClick={() => setConfirmDeleteId(c.id)}>
-                        <Trash2 size={13} /> Deletar
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleEditar(c)}>
+                          <Edit3 size={13} /> Editar
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => setConfirmDeleteId(c.id)}>
+                          <Trash2 size={13} /> Deletar
+                        </Button>
+                      </div>
                     )}
                   </td>
                 </tr>

@@ -45,6 +45,7 @@ export default function RelatoriosPage() {
   const [porCategoria, setPorCategoria] = useState<RelatorioPorCategoria | null>(null);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
+  const [sectionErrors, setSectionErrors] = useState<{ pessoa?: string; categoria?: string }>({});
   const [filtroFinalidade, setFiltroFinalidade] = useState<"" | Finalidade>("");
   const [filtroMes, setFiltroMes] = useState<number | undefined>(undefined);
   const [filtroAno, setFiltroAno] = useState<number | undefined>(new Date().getFullYear());
@@ -52,11 +53,31 @@ export default function RelatoriosPage() {
   const carregar = async () => {
     setLoading(true);
     setErro("");
+    setSectionErrors({});
     try {
       const filtro: FiltroRelatorio = { mes: filtroMes, ano: filtroAno };
-      const [p, c] = await Promise.all([relatorioPorPessoa(filtro), relatorioPorCategoria(filtro)]);
-      setPorPessoa(p);
-      setPorCategoria(c);
+      const [pessoaResult, categoriaResult] = await Promise.allSettled([
+        relatorioPorPessoa(filtro),
+        relatorioPorCategoria(filtro),
+      ]);
+      const errors: { pessoa?: string; categoria?: string } = {};
+
+      if (pessoaResult.status === "fulfilled") {
+        setPorPessoa(pessoaResult.value);
+      } else {
+        setPorPessoa(null);
+        errors.pessoa = "Não foi possível carregar os relatórios por pessoa.";
+      }
+
+      if (categoriaResult.status === "fulfilled") {
+        setPorCategoria(categoriaResult.value);
+      } else {
+        setPorCategoria(null);
+        errors.categoria = "Não foi possível carregar os relatórios por categoria.";
+      }
+
+      setSectionErrors(errors);
+      if (Object.keys(errors).length === 2) setErro("Não foi possível carregar os relatórios.");
     } catch (err: unknown) {
       setErro(err instanceof Error ? err.message : "Erro ao carregar relatórios.");
     } finally {
@@ -260,6 +281,11 @@ export default function RelatoriosPage() {
           <CardTitle>Totais por Pessoa</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
+          {sectionErrors.pessoa && (
+            <div className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300">
+              {sectionErrors.pessoa}
+            </div>
+          )}
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50 dark:bg-gray-700/50">
@@ -341,6 +367,11 @@ export default function RelatoriosPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {sectionErrors.categoria && (
+            <div className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300">
+              {sectionErrors.categoria}
+            </div>
+          )}
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50 dark:bg-gray-700/50">

@@ -1,10 +1,8 @@
 import { ArrowDownCircle, ArrowUpCircle, Layers, Tag, TrendingUp, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { listarCategorias } from "../api/categorias";
-import { listarPessoas } from "../api/pessoas";
-import { relatorioPorPessoa } from "../api/relatorios";
-import { listarTransacoes } from "../api/transacoes";
+import { obterResumoDashboard } from "../api/dashboard";
 import { Card, CardContent } from "../components/ui/card";
+import type { DashboardResumo } from "../types";
 
 type StatColor = "emerald" | "red";
 
@@ -15,15 +13,14 @@ interface StatCardProps {
   color: StatColor;
 }
 
-// Mapeamento de cor para classes Tailwind (light + dark) — precisa ser literal para o Tailwind detectar
 const STAT_COLORS: Record<StatColor, { icon: string; bg: string }> = {
   emerald: {
     icon: "text-emerald-600 dark:text-emerald-400",
-    bg:   "bg-emerald-50 dark:bg-emerald-900/30",
+    bg: "bg-emerald-50 dark:bg-emerald-900/30",
   },
   red: {
     icon: "text-red-600 dark:text-red-400",
-    bg:   "bg-red-50 dark:bg-red-900/30",
+    bg: "bg-red-50 dark:bg-red-900/30",
   },
 };
 
@@ -64,41 +61,30 @@ function CountCard({ label, count, icon }: Readonly<CountCardProps>) {
   );
 }
 
+function SkeletonCard() {
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-4 p-5">
+        <div className="h-11 w-11 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
+        <div className="flex-1 space-y-2">
+          <div className="h-3 w-28 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+          <div className="h-6 w-36 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function DashboardPage() {
-  const [totalReceitas, setTotalReceitas] = useState(0);
-  const [totalDespesas, setTotalDespesas] = useState(0);
-  const [saldoLiquido, setSaldoLiquido] = useState(0);
-  const [receitasMes, setReceitasMes] = useState(0);
-  const [despesasMes, setDespesasMes] = useState(0);
-  const [saldoMes, setSaldoMes] = useState(0);
-  const [nPessoas, setNPessoas] = useState(0);
-  const [nCategorias, setNCategorias] = useState(0);
-  const [nTransacoes, setNTransacoes] = useState(0);
+  const [resumo, setResumo] = useState<DashboardResumo | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
 
-  const mesAtual = new Date().getMonth() + 1;
   const anoAtual = new Date().getFullYear();
 
   useEffect(() => {
-    Promise.all([
-      relatorioPorPessoa(),
-      relatorioPorPessoa({ mes: mesAtual, ano: anoAtual }),
-      listarPessoas(),
-      listarCategorias(),
-      listarTransacoes(),
-    ])
-      .then(([relTotal, relMes, pessoas, categorias, transacoes]) => {
-        setTotalReceitas(relTotal.totalGeralReceitas);
-        setTotalDespesas(relTotal.totalGeralDespesas);
-        setSaldoLiquido(relTotal.saldoLiquido);
-        setReceitasMes(relMes.totalGeralReceitas);
-        setDespesasMes(relMes.totalGeralDespesas);
-        setSaldoMes(relMes.saldoLiquido);
-        setNPessoas(pessoas.length);
-        setNCategorias(categorias.length);
-        setNTransacoes(transacoes.length);
-      })
+    obterResumoDashboard()
+      .then(setResumo)
       .catch((err: unknown) => {
         setErro(err instanceof Error ? err.message : "Erro ao carregar o dashboard.");
       })
@@ -110,12 +96,19 @@ export default function DashboardPage() {
 
   const nomeMes = new Date().toLocaleString("pt-BR", { month: "long" });
 
-  const saldoMesColor:   StatColor = saldoMes    >= 0 ? "emerald" : "red";
-  const saldoTotalColor: StatColor = saldoLiquido >= 0 ? "emerald" : "red";
+  const saldoMesColor: StatColor = (resumo?.saldoMes ?? 0) >= 0 ? "emerald" : "red";
+  const saldoTotalColor: StatColor = (resumo?.saldoLiquido ?? 0) >= 0 ? "emerald" : "red";
+
+  const renderSkeletonGrid = () => (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+    </div>
+  );
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">Visão geral das suas finanças</p>
@@ -127,50 +120,44 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {loading ? (
-        <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-          Carregando...
-        </div>
-      ) : !erro ? (
-        <>
-          {/* Mês atual */}
-          <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 capitalize">
-              {nomeMes} de {anoAtual}
-            </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <StatCard label="Receitas do mês"  value={fmt(receitasMes)}  icon={<ArrowUpCircle size={20} />}   color="emerald" />
-              <StatCard label="Despesas do mês"  value={fmt(despesasMes)}  icon={<ArrowDownCircle size={20} />} color="red" />
-              <StatCard label="Saldo do mês"     value={fmt(saldoMes)}     icon={<TrendingUp size={20} />}      color={saldoMesColor} />
-            </div>
-          </section>
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 capitalize">
+          {nomeMes} de {anoAtual}
+        </h2>
+        {loading ? renderSkeletonGrid() : resumo ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <StatCard label="Receitas do mês" value={fmt(resumo.receitasMes)} icon={<ArrowUpCircle size={20} />} color="emerald" />
+            <StatCard label="Despesas do mês" value={fmt(resumo.despesasMes)} icon={<ArrowDownCircle size={20} />} color="red" />
+            <StatCard label="Saldo do mês" value={fmt(resumo.saldoMes)} icon={<TrendingUp size={20} />} color={saldoMesColor} />
+          </div>
+        ) : null}
+      </section>
 
-          {/* Acumulado total */}
-          <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Acumulado total
-            </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <StatCard label="Total Receitas" value={fmt(totalReceitas)} icon={<ArrowUpCircle size={20} />}   color="emerald" />
-              <StatCard label="Total Despesas" value={fmt(totalDespesas)} icon={<ArrowDownCircle size={20} />} color="red" />
-              <StatCard label="Saldo Líquido"  value={fmt(saldoLiquido)} icon={<TrendingUp size={20} />}      color={saldoTotalColor} />
-            </div>
-          </section>
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          Acumulado total
+        </h2>
+        {loading ? renderSkeletonGrid() : resumo ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <StatCard label="Total Receitas" value={fmt(resumo.totalReceitas)} icon={<ArrowUpCircle size={20} />} color="emerald" />
+            <StatCard label="Total Despesas" value={fmt(resumo.totalDespesas)} icon={<ArrowDownCircle size={20} />} color="red" />
+            <StatCard label="Saldo Líquido" value={fmt(resumo.saldoLiquido)} icon={<TrendingUp size={20} />} color={saldoTotalColor} />
+          </div>
+        ) : null}
+      </section>
 
-          {/* Contadores */}
-          <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Cadastros
-            </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <CountCard label="Pessoas"    count={nPessoas}    icon={<Users size={20} />}  />
-              <CountCard label="Categorias" count={nCategorias} icon={<Tag size={20} />}    />
-              <CountCard label="Transações" count={nTransacoes} icon={<Layers size={20} />} />
-            </div>
-          </section>
-        </>
-      ) : null}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          Cadastros
+        </h2>
+        {loading ? renderSkeletonGrid() : resumo ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <CountCard label="Pessoas" count={resumo.totalPessoas} icon={<Users size={20} />} />
+            <CountCard label="Categorias" count={resumo.totalCategorias} icon={<Tag size={20} />} />
+            <CountCard label="Transações" count={resumo.totalTransacoes} icon={<Layers size={20} />} />
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 }

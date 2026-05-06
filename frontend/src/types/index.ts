@@ -27,6 +27,26 @@ export interface Transacao {
   data: string;
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface DashboardResumo {
+  totalReceitas: number;
+  totalDespesas: number;
+  saldoLiquido: number;
+  receitasMes: number;
+  despesasMes: number;
+  saldoMes: number;
+  totalPessoas: number;
+  totalCategorias: number;
+  totalTransacoes: number;
+}
+
 export interface TotalPorPessoa {
   pessoaId: number;
   nomePessoa: string;
