@@ -4,60 +4,75 @@ Sistema web para controle de gastos residenciais com autenticação por usuário
 
 ## Tecnologias
 
-| Camada     | Tecnologia                                                      |
-|------------|-----------------------------------------------------------------|
-| Back-end   | C# / ASP.NET Core 10 Web API                                    |
-| Banco      | SQLite via Entity Framework Core (`EnsureCreated`)              |
-| Auth       | JWT Bearer (`Microsoft.AspNetCore.Authentication.JwtBearer`)    |
-| Segurança  | BCrypt (`BCrypt.Net-Next`) para hash de senhas                  |
-| Front-end  | React 18 + TypeScript + Vite                                    |
-| UI         | Tailwind CSS v4 + shadcn/ui + lucide-react                      |
-| HTTP       | Axios (com interceptors para JWT e redirecionamento 401)        |
-| Roteamento | React Router v6                                                 |
-| PDF        | jsPDF + jspdf-autotable                                         |
+| Camada | Tecnologia |
+|--------|------------|
+| Back-end | ASP.NET Core 10 Web API |
+| Banco | PostgreSQL via Entity Framework Core migrations |
+| Auth | JWT Bearer + BCrypt |
+| Segurança | Rate limiter nativo para endpoints de autenticação |
+| Front-end | React 18 + TypeScript + Vite |
+| UI | Tailwind CSS v4 + shadcn/ui + lucide-react |
+| HTTP | Axios com interceptor JWT |
+| PDF | jsPDF + jspdf-autotable |
 
 ## Estrutura do projeto
 
 ```text
-sistema-controle-gastos-residenciais/
-├── backend/
-│   └── GastosResidenciais.Api/
-│       ├── Controllers/      # Endpoints RESTful
-│       ├── Data/             # DbContext (SQLite)
-│       ├── DTOs/             # Objetos de transferência de dados
-│       ├── Models/           # Entidades de domínio + Enums
-│       ├── Services/         # Regras de negócio + AuthService
-│       ├── Dockerfile        # Build para deploy (Railway)
-│       └── Program.cs        # Configuração da aplicação + JWT
-└── frontend/
-    ├── src/
-    │   ├── api/              # Módulos de acesso à API (Axios)
-    │   ├── components/       # Layout, navegação e ProtectedRoute
-    │   ├── contexts/         # AuthContext (token JWT + estado de sessão)
-    │   ├── hooks/            # useDarkMode
-    │   ├── pages/            # Páginas por funcionalidade
-    │   └── types/            # Tipos TypeScript compartilhados
-    └── vercel.json           # Rewrite para SPA routing no Vercel
+backend/
+  GastosResidenciais.Api/
+    Controllers/      # Endpoints REST
+    Data/             # AppDbContext + factory design-time
+    DTOs/             # DTOs de entrada/saída
+    Migrations/       # Migration inicial PostgreSQL
+    Models/           # Entidades e enums
+    Services/         # Regras de negócio
+  GastosResidenciais.Tests/
+    *.cs              # Testes xUnit unitários e integração
+frontend/
+  src/
+    api/              # Cliente Axios por recurso
+    components/       # Layout, ProtectedRoute e UI
+    contexts/         # AuthContext
+    pages/            # Telas da aplicação
+    types/            # Tipos TypeScript
 ```
 
 ## Variáveis de ambiente
 
-### Variáveis do back-end
+### Back-end
 
-| Variável          | Descrição                                               | Obrigatória em prod |
-|-------------------|---------------------------------------------------------|---------------------|
-| `JWT_SECRET`      | Chave secreta para assinar tokens JWT (mínimo 32 chars) | Sim                 |
-| `ASPNETCORE_URLS` | URL de escuta da API (ex: `http://+:8080`)              | Sim (Railway)       |
+| Variável | Descrição | Obrigatória em prod |
+|----------|-----------|---------------------|
+| `DATABASE_URL` | URL PostgreSQL no formato Railway, ex. `postgresql://user:pass@host:5432/db` | Sim |
+| `JWT_SECRET` | Chave secreta para assinar tokens JWT, mínimo 32 caracteres | Sim |
+| `PORT` | Porta injetada pelo Railway | Sim no Railway |
+| `CORS_ORIGINS` | Origens permitidas separadas por vírgula | Sim |
 
-> Em desenvolvimento, se `JWT_SECRET` não estiver definida, é usada uma chave padrão insegura. **Nunca use o valor padrão em produção.**
+Em desenvolvimento, se `DATABASE_URL` não existir, a API usa `ConnectionStrings:Default` do `appsettings.json`. Se `JWT_SECRET` não existir, há fallback inseguro apenas para desenvolvimento.
 
-### Variáveis do front-end
+### Front-end
 
-| Variável       | Descrição                                          | Obrigatória em prod |
-|----------------|----------------------------------------------------|---------------------|
-| `VITE_API_URL` | URL base da API (ex: `https://api.up.railway.app`) | Sim                 |
+| Variável | Descrição | Obrigatória em prod |
+|----------|-----------|---------------------|
+| `VITE_API_URL` | URL base da API, ex. `https://api.up.railway.app` | Sim |
 
-> Variáveis `VITE_*` são embutidas no bundle no momento do build. Defina-as antes de buildar (Vercel: Settings → Environment Variables).
+## Banco e migrations
+
+A aplicação usa PostgreSQL com EF Core migrations. No startup, o `Program.cs` executa `db.Database.MigrateAsync()` para aplicar migrations pendentes automaticamente, o que atende o deploy no Railway sem rodar comandos manuais no container.
+
+Comandos úteis:
+
+```bash
+cd backend/GastosResidenciais.Api
+dotnet ef migrations add InitialCreate
+dotnet ef database update
+```
+
+Para produção no Railway, configure `DATABASE_URL`, `JWT_SECRET` e `CORS_ORIGINS`. O health check pode ser monitorado em:
+
+```text
+GET /health
+```
 
 ## Como executar localmente
 
@@ -65,10 +80,11 @@ sistema-controle-gastos-residenciais/
 
 ```bash
 cd backend/GastosResidenciais.Api
+dotnet restore
 dotnet run --launch-profile http
 ```
 
-A API estará disponível em `http://localhost:5000`. O banco de dados `gastos.db` é criado automaticamente na primeira execução.
+A API sobe em `http://localhost:5000` por padrão.
 
 ### Front-end
 
@@ -78,89 +94,54 @@ npm install
 npm run dev
 ```
 
-O front-end estará disponível em `http://localhost:5173`.
+O front-end fica em `http://localhost:5173`.
 
-> O Vite proxy redireciona `/api/*` para `http://localhost:5000`, eliminando problemas de CORS em desenvolvimento.
+### Testes
+
+```bash
+dotnet test sistema-controle-gastos-residenciais.sln
+npm run build --prefix frontend
+```
 
 ## Deploy
 
-| Serviço | Camada     | Root directory                   |
-|---------|------------|----------------------------------|
-| Railway | Back-end   | `backend/GastosResidenciais.Api` |
-| Vercel  | Front-end  | `frontend/`                      |
+| Serviço | Camada | Root directory |
+|---------|--------|----------------|
+| Railway | Back-end | `backend/GastosResidenciais.Api` |
+| Vercel | Front-end | `frontend/` |
 
-O back-end usa um `Dockerfile` customizado (sem Nixpacks) para evitar erros de build secret no Railway. O front-end usa `vercel.json` com rewrite universal para suportar SPA routing.
+O back-end usa o `Dockerfile` do projeto da API. As migrations são aplicadas no startup via `MigrateAsync()`.
 
 ## Funcionalidades
 
-### Autenticação
+- Autenticação com registro/login, JWT no `localStorage` e redirecionamento em 401.
+- Rate limiting em `POST /api/auth/login` e `POST /api/auth/registrar`: 5 tentativas por IP por minuto, com `429` e header `Retry-After`.
+- CRUD de pessoas.
+- CRUD de categorias, com bloqueio de deleção quando houver transações vinculadas.
+- CRUD parcial de transações: criar, editar, deletar e listar com paginação.
+- Dashboard com resumo em chamada única.
+- Relatórios por pessoa e categoria com filtros aplicados no SQL.
+- Exportação de relatórios em PDF.
 
-- Cadastro com login e senha (mínimo 8 caracteres, letras maiúsculas/minúsculas, número e caractere especial).
-- Login com geração de token JWT (validade de 7 dias).
-- Cada usuário acessa apenas seus próprios dados (isolamento completo por perfil).
-- Token armazenado no `localStorage`; requisições protegidas por interceptor Axios.
-- Redirecionamento automático para `/login` em caso de token expirado ou inválido (401).
+## Endpoints principais
 
-### Pessoas (CRUD completo)
-
-- Criar, editar, deletar e listar pessoas.
-- Ao deletar uma pessoa, todas as transações vinculadas são removidas automaticamente (cascade).
-
-### Categorias (Criar e Listar)
-
-- Cada categoria possui uma **finalidade**: `Despesa`, `Receita` ou `Ambas`.
-- A finalidade determina quais tipos de transação podem usar a categoria.
-
-### Transações (Criar e Listar)
-
-- **Menores de 18 anos**: somente transações do tipo `Despesa` são aceitas.
-- **Compatibilidade de categoria**: o tipo da transação deve ser compatível com a finalidade da categoria escolhida.
-  - `Despesa` → categorias com finalidade `Despesa` ou `Ambas`.
-  - `Receita` → categorias com finalidade `Receita` ou `Ambas`.
-- Campo de descrição opcional; campos obrigatórios sinalizados com asterisco e destacados em caso de erro.
-
-### Relatórios
-
-- **Por Pessoa**: total de receitas, despesas e saldo por pessoa + totais gerais.
-- **Por Categoria**: total de receitas, despesas e saldo por categoria + totais gerais.
-- **Exportação em PDF**: gera um relatório personalizado por usuário via download direto no navegador.
-
-## Endpoints da API
-
-### Endpoints de autenticação
-
-| Método | Rota                    | Descrição                          | Auth |
-|--------|-------------------------|------------------------------------|------|
-| POST   | /api/auth/registrar     | Cria novo usuário e retorna token  | Não  |
-| POST   | /api/auth/login         | Autentica usuário e retorna token  | Não  |
-
-### Pessoas
-
-| Método | Rota                | Descrição                        | Auth |
-|--------|---------------------|----------------------------------|------|
-| GET    | /api/pessoas        | Lista pessoas do usuário         | Sim  |
-| GET    | /api/pessoas/{id}   | Obtém pessoa por ID              | Sim  |
-| POST   | /api/pessoas        | Cria nova pessoa                 | Sim  |
-| PUT    | /api/pessoas/{id}   | Edita pessoa                     | Sim  |
-| DELETE | /api/pessoas/{id}   | Deleta pessoa (+ transações)     | Sim  |
-
-### Categorias
-
-| Método | Rota                  | Descrição                        | Auth |
-|--------|-----------------------|----------------------------------|------|
-| GET    | /api/categorias       | Lista categorias do usuário      | Sim  |
-| POST   | /api/categorias       | Cria nova categoria              | Sim  |
-
-### Transações
-
-| Método | Rota                | Descrição                        | Auth |
-|--------|---------------------|----------------------------------|------|
-| GET    | /api/transacoes     | Lista transações do usuário      | Sim  |
-| POST   | /api/transacoes     | Cria nova transação              | Sim  |
-
-### Endpoints de relatórios
-
-| Método | Rota                          | Descrição                         | Auth |
-|--------|-------------------------------|-----------------------------------|------|
-| GET    | /api/relatorios/por-pessoa    | Relatório de totais por pessoa    | Sim  |
-| GET    | /api/relatorios/por-categoria | Relatório de totais por categoria | Sim  |
+| Método | Rota | Descrição | Auth |
+|--------|------|-----------|------|
+| POST | `/api/auth/registrar` | Cria usuário e retorna token | Não |
+| POST | `/api/auth/login` | Autentica usuário e retorna token | Não |
+| GET | `/api/pessoas` | Lista pessoas | Sim |
+| POST | `/api/pessoas` | Cria pessoa | Sim |
+| PUT | `/api/pessoas/{id}` | Edita pessoa | Sim |
+| DELETE | `/api/pessoas/{id}` | Remove pessoa e suas transações | Sim |
+| GET | `/api/categorias` | Lista categorias | Sim |
+| POST | `/api/categorias` | Cria categoria | Sim |
+| PUT | `/api/categorias/{id}` | Edita categoria | Sim |
+| DELETE | `/api/categorias/{id}` | Remove categoria, se não houver transações | Sim |
+| GET | `/api/transacoes?page=1&pageSize=20` | Lista transações paginadas | Sim |
+| POST | `/api/transacoes` | Cria transação | Sim |
+| PUT | `/api/transacoes/{id}` | Edita transação | Sim |
+| DELETE | `/api/transacoes/{id}` | Remove transação | Sim |
+| GET | `/api/dashboard/resumo` | Resumo financeiro do dashboard | Sim |
+| GET | `/api/relatorios/por-pessoa` | Totais por pessoa, com `mes`/`ano` opcionais | Sim |
+| GET | `/api/relatorios/por-categoria` | Totais por categoria, com `mes`/`ano` opcionais | Sim |
+| GET | `/health` | Health check da API e banco | Não |
