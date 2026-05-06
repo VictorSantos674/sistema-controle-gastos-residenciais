@@ -1,37 +1,77 @@
-import axios from "axios";
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-const STORAGE_KEY = "gastos_auth";
+interface AuthSession {
+  token: string;
+  login: string;
+}
+
+interface RetriableRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+  skipAuthRefresh?: boolean;
+}
+
+let accessToken: string | null = null;
+let refreshPromise: Promise<AuthSession> | null = null;
+let onSessionChanged: ((session: AuthSession | null) => void) | null = null;
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? "",
   headers: { "Content-Type": "application/json" },
+  withCredentials: true,
 });
 
-/// Injeta o token JWT em todas as requisições, se disponível.
-client.interceptors.request.use((config) => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const { token } = JSON.parse(stored) as { token: string };
-      if (token) config.headers.Authorization = `Bearer ${token}`;
-    }
-  } catch {
-    // localStorage indisponível ou JSON inválido — ignora silenciosamente
+export function setAccessToken(token: string | null) {
+  accessToken = token;
+}
+
+export function setSessionChangeHandler(handler: ((session: AuthSession | null) => void) | null) {
+  onSessionChanged = handler;
+}
+
+async function refreshSession(): Promise<AuthSession> {
+  if (!refreshPromise) {
+    refreshPromise = client
+      .post<AuthSession>("/api/auth/refresh", undefined, { skipAuthRefresh: true } as RetriableRequestConfig)
+      .then((response) => {
+        setAccessToken(response.data.token);
+        onSessionChanged?.(response.data);
+        return response.data;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
   }
+
+  return refreshPromise;
+}
+
+client.interceptors.request.use((config) => {
+  if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
   return config;
 });
 
-/// Trata erros de resposta: extrai mensagem amigável e redireciona para /login em caso de 401.
 client.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err?.response?.status === 401) {
-      localStorage.removeItem(STORAGE_KEY);
-      window.location.href = "/login";
+  async (err: AxiosError<{ mensagem?: string }>) => {
+    const original = err.config as RetriableRequestConfig | undefined;
+
+    if (err.response?.status === 401 && original && !original._retry && !original.skipAuthRefresh) {
+      original._retry = true;
+
+      try {
+        const session = await refreshSession();
+        original.headers.Authorization = `Bearer ${session.token}`;
+        return client(original);
+      } catch {
+        setAccessToken(null);
+        onSessionChanged?.(null);
+        window.location.href = "/login";
+      }
     }
+
     const mensagem =
-      err?.response?.data?.mensagem ??
-      (err?.response ? `Erro ${err.response.status}` : "Sem conexão com o servidor.");
+      err.response?.data?.mensagem ??
+      (err.response ? `Erro ${err.response.status}` : "Sem conexão com o servidor.");
     return Promise.reject(new Error(mensagem));
   }
 );

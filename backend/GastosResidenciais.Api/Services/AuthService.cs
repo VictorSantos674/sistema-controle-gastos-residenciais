@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using GastosResidenciais.Api.Data;
 using GastosResidenciais.Api.DTOs;
@@ -10,96 +11,130 @@ using Microsoft.IdentityModel.Tokens;
 namespace GastosResidenciais.Api.Services;
 
 /// <summary>
-/// Implementação do serviço de autenticação com JWT e BCrypt.
-///
-/// <b>Fluxo de registro:</b>
-///   1. Verifica se o login já está em uso.
-///   2. Faz hash da senha com BCrypt (salt aleatório).
-///   3. Persiste o usuário.
-///   4. Gera e retorna o JWT.
-///
-/// <b>Fluxo de login:</b>
-///   1. Busca o usuário pelo login.
-///   2. Verifica a senha com BCrypt.Verify.
-///   3. Gera e retorna o JWT.
+/// Implementação do serviço de autenticação com JWT curto, refresh token opaco e BCrypt.
 /// </summary>
 public class AuthService : IAuthService
 {
+    private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
+
     private readonly AppDbContext _context;
     private readonly IConfiguration _config;
 
     public AuthService(AppDbContext context, IConfiguration config)
     {
         _context = context;
-        _config  = config;
+        _config = config;
     }
 
     /// <inheritdoc/>
-    public async Task<(TokenDto? Resultado, string? Erro)> RegistrarAsync(RegistrarDto dto)
+    public async Task<(AuthResultDto? Resultado, string? Erro)> RegistrarAsync(RegistrarDto dto)
     {
-        // Login deve ser único no sistema
         var existe = await _context.Usuarios.AnyAsync(u => u.Login == dto.Login);
         if (existe)
             return (null, "Este login já está em uso. Escolha outro.");
 
         var usuario = new Usuario
         {
-            Login     = dto.Login,
-            // BCrypt gera salt automático e produz um hash seguro de 60 caracteres
+            Login = dto.Login,
             SenhaHash = BCrypt.Net.BCrypt.HashPassword(dto.Senha)
         };
 
         _context.Usuarios.Add(usuario);
         await _context.SaveChangesAsync();
 
-        return (GerarToken(usuario), null);
+        return (await GerarSessaoAsync(usuario), null);
     }
 
     /// <inheritdoc/>
-    public async Task<(TokenDto? Resultado, string? Erro)> LoginAsync(LoginDto dto)
+    public async Task<(AuthResultDto? Resultado, string? Erro)> LoginAsync(LoginDto dto)
     {
         var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Login == dto.Login);
 
-        // Mensagem genérica: não informar ao atacante se o login existe ou não
         if (usuario is null || !BCrypt.Net.BCrypt.Verify(dto.Senha, usuario.SenhaHash))
             return (null, "Login ou senha inválidos.");
 
-        return (GerarToken(usuario), null);
+        return (await GerarSessaoAsync(usuario), null);
     }
 
-    /// <summary>
-    /// Gera um JWT com o ID e login do usuário como claims.
-    /// Expiração: 7 dias (suficiente para uso contínuo sem necessidade de refresh token).
-    /// </summary>
-    private TokenDto GerarToken(Usuario usuario)
+    /// <inheritdoc/>
+    public async Task<(AuthResultDto? Resultado, string? Erro)> RefreshAsync(string? refreshToken)
     {
-        // Lê a chave secreta da configuração / variável de ambiente
+        if (string.IsNullOrWhiteSpace(refreshToken))
+            return (null, "Sessão expirada. Faça login novamente.");
+
+        var agora = DateTime.UtcNow;
+        var candidatos = await _context.Usuarios
+            .Where(u => u.RefreshToken != null && u.RefreshTokenExpiry != null && u.RefreshTokenExpiry > agora)
+            .ToListAsync();
+
+        var usuario = candidatos.FirstOrDefault(u =>
+            BCrypt.Net.BCrypt.Verify(refreshToken, u.RefreshToken));
+
+        if (usuario is null)
+            return (null, "Sessão expirada. Faça login novamente.");
+
+        return (await GerarSessaoAsync(usuario), null);
+    }
+
+    /// <inheritdoc/>
+    public async Task LogoutAsync(string? refreshToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+            return;
+
+        var candidatos = await _context.Usuarios
+            .Where(u => u.RefreshToken != null)
+            .ToListAsync();
+
+        var usuario = candidatos.FirstOrDefault(u =>
+            BCrypt.Net.BCrypt.Verify(refreshToken, u.RefreshToken));
+
+        if (usuario is null)
+            return;
+
+        usuario.RefreshToken = null;
+        usuario.RefreshTokenExpiry = null;
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task<AuthResultDto> GerarSessaoAsync(Usuario usuario)
+    {
+        var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+        usuario.RefreshToken = BCrypt.Net.BCrypt.HashPassword(refreshToken);
+        usuario.RefreshTokenExpiry = DateTime.UtcNow.Add(RefreshTokenLifetime);
+
+        await _context.SaveChangesAsync();
+
+        return new AuthResultDto
+        {
+            Token = GerarAccessToken(usuario),
+            Login = usuario.Login,
+            RefreshToken = refreshToken
+        };
+    }
+
+    private string GerarAccessToken(Usuario usuario)
+    {
         var jwtSecret = _config["JWT_SECRET"]
             ?? throw new InvalidOperationException("JWT_SECRET não configurado.");
 
-        var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
         {
-            // NameIdentifier = ID numérico — usado para extrair o usuarioId nos controllers
             new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-            // Name = login legível — exibido na interface
             new Claim(ClaimTypes.Name, usuario.Login)
         };
 
         var token = new JwtSecurityToken(
-            issuer:             "GastosResidenciais",
-            audience:           "GastosResidenciais",
-            claims:             claims,
-            expires:            DateTime.UtcNow.AddDays(7),
+            issuer: "GastosResidenciais",
+            audience: "GastosResidenciais",
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(15),
             signingCredentials: creds
         );
 
-        return new TokenDto
-        {
-            Token = new JwtSecurityTokenHandler().WriteToken(token),
-            Login = usuario.Login
-        };
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

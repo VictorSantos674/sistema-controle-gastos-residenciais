@@ -56,7 +56,23 @@ public class AuthServiceTests
         Assert.Null(resultado.Erro);
         Assert.Equal("ana", resultado.Resultado!.Login);
         Assert.False(string.IsNullOrWhiteSpace(resultado.Resultado.Token));
+        Assert.False(string.IsNullOrWhiteSpace(resultado.Resultado.RefreshToken));
         Assert.Equal(3, resultado.Resultado.Token.Split('.').Length);
+    }
+
+    [Fact]
+    public async Task RefreshValidoRotacionaRefreshTokenEGeraNovoAccessToken()
+    {
+        await using var context = TestDb.CreateContext();
+        var service = new AuthService(context, Config());
+        var registro = await service.RegistrarAsync(new RegistrarDto { Login = "lia", Senha = "12345678" });
+
+        var refresh = await service.RefreshAsync(registro.Resultado!.RefreshToken);
+
+        Assert.NotNull(refresh.Resultado);
+        Assert.Null(refresh.Erro);
+        Assert.NotEqual(registro.Resultado.RefreshToken, refresh.Resultado!.RefreshToken);
+        Assert.False(string.IsNullOrWhiteSpace(refresh.Resultado.Token));
     }
 
     private static IConfiguration Config() =>

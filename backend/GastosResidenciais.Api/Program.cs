@@ -102,7 +102,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("FrontEnd", policy =>
         policy.WithOrigins(corsOrigins)
               .AllowAnyHeader()
-              .AllowAnyMethod());
+              .AllowAnyMethod()
+              .AllowCredentials());
 });
 
 var app = builder.Build();

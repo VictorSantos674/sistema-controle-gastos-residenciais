@@ -27,6 +27,12 @@ public class Usuario
     [Required]
     public string SenhaHash { get; set; } = string.Empty;
 
+    /// <summary>Hash BCrypt do refresh token ativo, quando houver sessão válida.</summary>
+    public string? RefreshToken { get; set; }
+
+    /// <summary>Data/hora UTC de expiração do refresh token ativo.</summary>
+    public DateTime? RefreshTokenExpiry { get; set; }
+
     /// <summary>Pessoas cadastradas por este usuário.</summary>
     public ICollection<Pessoa> Pessoas { get; set; } = new List<Pessoa>();
 

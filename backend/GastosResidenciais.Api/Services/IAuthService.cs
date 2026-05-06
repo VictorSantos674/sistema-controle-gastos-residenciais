@@ -10,13 +10,23 @@ public interface IAuthService
 {
     /// <summary>
     /// Registra um novo usuário.
-    /// Retorna o token JWT em caso de sucesso ou uma mensagem de erro se o login já estiver em uso.
+    /// Retorna access token e refresh token em caso de sucesso ou uma mensagem de erro se o login já estiver em uso.
     /// </summary>
-    Task<(TokenDto? Resultado, string? Erro)> RegistrarAsync(RegistrarDto dto);
+    Task<(AuthResultDto? Resultado, string? Erro)> RegistrarAsync(RegistrarDto dto);
 
     /// <summary>
     /// Autentica um usuário existente.
-    /// Retorna o token JWT em caso de sucesso ou erro se login/senha forem inválidos.
+    /// Retorna access token e refresh token em caso de sucesso ou erro se login/senha forem inválidos.
     /// </summary>
-    Task<(TokenDto? Resultado, string? Erro)> LoginAsync(LoginDto dto);
+    Task<(AuthResultDto? Resultado, string? Erro)> LoginAsync(LoginDto dto);
+
+    /// <summary>
+    /// Valida e rotaciona o refresh token, retornando uma nova sessão.
+    /// </summary>
+    Task<(AuthResultDto? Resultado, string? Erro)> RefreshAsync(string? refreshToken);
+
+    /// <summary>
+    /// Invalida a sessão associada ao refresh token informado.
+    /// </summary>
+    Task LogoutAsync(string? refreshToken);
 }

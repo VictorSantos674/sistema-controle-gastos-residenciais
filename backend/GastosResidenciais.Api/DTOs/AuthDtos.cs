@@ -33,3 +33,13 @@ public class TokenDto
     /// <summary>Login do usuário autenticado.</summary>
     public string Login { get; set; } = string.Empty;
 }
+
+/// <summary>
+/// Resultado interno do fluxo de autenticação.
+/// O refresh token deve ser emitido apenas como cookie HttpOnly pelo controller.
+/// </summary>
+public class AuthResultDto : TokenDto
+{
+    /// <summary>Refresh token opaco em texto puro, usado apenas para criar o cookie seguro.</summary>
+    public string RefreshToken { get; set; } = string.Empty;
+}
