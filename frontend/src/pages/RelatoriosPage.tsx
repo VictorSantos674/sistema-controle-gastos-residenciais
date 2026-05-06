@@ -1,5 +1,3 @@
-import autoTable from "jspdf-autotable";
-import jsPDF from "jspdf";
 import { Download, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -118,7 +116,12 @@ export default function RelatoriosPage() {
       ? MESES[filtroMes - 1]
       : "Todos os períodos";
 
-  const exportarPDF = () => {
+  const exportarPDF = async () => {
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
+
     const doc = new jsPDF();
     const agora = new Date().toLocaleDateString("pt-BR");
 
@@ -173,7 +176,7 @@ export default function RelatoriosPage() {
         },
       });
 
-      y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 14;
+      y = (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 14;
     }
 
     // Totais por Categoria
